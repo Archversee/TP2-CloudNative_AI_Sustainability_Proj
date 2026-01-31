@@ -1,3 +1,11 @@
+# Generated data
+data/raw_pdfs/
+data/processed_json/
+
+# But allow samples
+!data/raw_pdfs/sample/
+!data/processed_json/sample/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
