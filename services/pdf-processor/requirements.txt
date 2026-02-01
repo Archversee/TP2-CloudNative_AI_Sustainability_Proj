@@ -1,0 +1,7 @@
+pdfplumber
+Pillow
+pdf2image
+redis>=5.0.0
+python-dotenv
+supabase>=2.0.0
+uvicorn[standard]>=0.24.0

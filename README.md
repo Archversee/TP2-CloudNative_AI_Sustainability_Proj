@@ -1,16 +1,28 @@
 # TP2-CloudNative_AI_Sustainability_Proj
 
-DEPENDENCIES:
-
+# DEPENDENCIES:
 pip install playwright
 python -m playwright install
 pip install pdfplumber
+pip install redis
+pip install fastapi uvicorn redis
 
 RUN:
-# Step 1: scrape
-docker compose up --build scraper
+# Run scraper manually
+docker-compose run --rm scraper
 
-# Step 2: process
-docker compose up --build pdf_processor
+# Just start PDF worker
+docker-compose up pdf-worker
+
+# Upload via API triggers the worker
+
+# Run 3 PDF workers
+docker-compose up --scale pdf-worker=3
+
+
+docker-compose up
+docker compose up --build
+
+docker compose down
 
 docker-compose stop (TO STOP)

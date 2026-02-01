@@ -1,0 +1,110 @@
+services:
+  # Redis Task Queue
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - ecolens-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # API Gateway (Always Running)
+  api:
+    build:
+      context: ../../
+      dockerfile: services/api/Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+    - ../../data:/data
+    environment:
+      - REDIS_URL=redis://redis:6379
+    env_file:
+      - ../../.env
+    networks:
+      - ecolens-network
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # PDF Processor Worker (Always Listening)
+  pdf-worker:
+    build:
+      context: ../../
+      dockerfile: services/pdf-processor/Dockerfile
+    command: python src/worker.py 
+    volumes:
+      - ../../data:/data
+    environment:
+      - REDIS_URL=redis://redis:6379
+    env_file:
+      - ../../.env
+    networks:
+      - ecolens-network
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  # AI Auditor Worker (Always Listening)
+  ai-worker:
+    build:
+      context: ../../
+      dockerfile: services/ai-auditor/Dockerfile
+    command: python src/worker.py 
+    volumes:
+      - ../../data:/data
+    environment:
+      - REDIS_URL=redis://redis:6379
+    env_file:
+      - ../../.env
+    networks:
+      - ecolens-network
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  # Embeddings Worker (Always Listening)
+  embeddings-worker:
+    build:
+      context: ../../
+      dockerfile: services/embeddings/Dockerfile
+    command: python src/worker.py 
+    volumes:
+      - ../../data:/data
+    environment:
+      - REDIS_URL=redis://redis:6379
+    env_file:
+      - ../../.env
+    networks:
+      - ecolens-network
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  # Scraper (Optional - can be triggered manually or scheduled)
+  scraper:
+    build:
+      context: ../../
+      dockerfile: services/scraper/Dockerfile
+    command: python src/scraper.py 
+    volumes:
+      - ../../data:/data
+    env_file:
+      - ../../.env
+    networks:
+      - ecolens-network
+    profiles:
+      - manual  # Only runs when explicitly called
+
+networks:
+  ecolens-network:
+    driver: bridge

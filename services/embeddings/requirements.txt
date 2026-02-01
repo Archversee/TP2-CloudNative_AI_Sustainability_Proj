@@ -1,0 +1,7 @@
+sentence-transformers==2.7.0
+numpy
+pandas
+python-dotenv==1.0.0
+supabase>=2.0.0
+redis>=5.0.0
+pdfplumber

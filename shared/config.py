@@ -1,0 +1,7 @@
+import os
+
+class Config:
+    SUPABASE_URL = os.getenv("SUPABASE_URL")
+    SUPABASE_KEY = os.getenv("SUPABASE_ANON_KEY")
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+    

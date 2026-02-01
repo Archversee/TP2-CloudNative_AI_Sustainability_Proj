@@ -323,142 +323,91 @@ def create_fallback_response(claims, error_msg):
         ]
     }
 
+def audit_document(data: dict) -> dict:
+    """
+    Run AI audit on a single document JSON dict
+    and return the processed result.
+    """
+    company = data.get("company", "UNKNOWN")
+    year = data.get("year", "UNKNOWN")
+
+    # Skip if PDF stage failed
+    if "processing_error" in data:
+        return {
+            **data,
+            "ai_summary": create_fallback_response([], "PDF processing failed")
+        }
+
+    # Combine page-level metrics
+    combined_metrics = {
+        "scope1_emissions_tco2e": [],
+        "scope2_emissions_tco2e": [],
+        "generic_metrics": []
+    }
+
+    for page in data.get("page_metrics", []):
+        combined_metrics["scope1_emissions_tco2e"].extend(
+            page.get("scope1_emissions_tco2e", [])
+        )
+        combined_metrics["scope2_emissions_tco2e"].extend(
+            page.get("scope2_emissions_tco2e", [])
+        )
+        combined_metrics["generic_metrics"].extend(
+            page.get("generic_metrics", [])
+        )
+
+    combined_metrics = deduplicate_metrics(combined_metrics)
+
+    # Reduce payload if needed
+    if len(combined_metrics["generic_metrics"]) > 50:
+        combined_metrics["generic_metrics"] = sample_generic_metrics(
+            combined_metrics["generic_metrics"], max_samples=50
+        )
+
+    claims = data.get("claims", [])
+    if should_reduce_claims(claims):
+        claims = prioritize_claims(claims, max_claims=15)
+
+    if claims:
+        ai_summary = call_gemini_ai(combined_metrics, claims, company, year)
+    else:
+        ai_summary = {
+            "overall_score": None,
+            "overall_summary": "No sustainability claims found",
+            "claim_reviews": []
+        }
+
+    return {
+        "company": company,
+        "year": year,
+        "source": data.get("source"),
+        "schema_version": data.get("schema_version"),
+        "processed_at": data.get("processed_at"),
+        "claims": claims,
+        "ai_summary": ai_summary
+    }
+
+
 # --- Main workflow ---
 def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-    print(f"Starting AI audit on {INPUT_DIR}", flush=True)
-    
-    successful = 0
-    failed = 0
 
     for json_file in sorted(os.listdir(INPUT_DIR)):
-        if not json_file.lower().endswith(".json"):
+        if not json_file.endswith(".json"):
             continue
 
-        input_path = os.path.join(INPUT_DIR, json_file)
-        
-        try:
-            with open(input_path, "r") as f:
-                data = json.load(f)
-        except json.JSONDecodeError as e:
-            print(f"✗ Failed to parse JSON {json_file}: {e}", flush=True)
-            failed += 1
-            continue
+        with open(os.path.join(INPUT_DIR, json_file)) as f:
+            data = json.load(f)
 
-        company = data.get("company", "UNKNOWN")
-        year = data.get("year", "UNKNOWN")
-        
-        print(f"\nProcessing {company} ({year})...", flush=True)
+        result = audit_document(data)
 
-        # Skip if there was a processing error in the PDF stage
-        if "processing_error" in data:
-            print(f"  ⚠ Skipping - PDF processing error: {data['processing_error']}", flush=True)
-            output = {**data, "ai_summary": create_fallback_response([], "PDF processing failed")}
-            output.pop("page_metrics", None)
-            output_path = os.path.join(OUTPUT_DIR, safe_filename(company, year))
-            with open(output_path, "w") as f:
-                json.dump(output, f, indent=2)
-            failed += 1
-            continue
+        out_path = os.path.join(
+            OUTPUT_DIR,
+            safe_filename(result["company"], result["year"])
+        )
 
-        # Combine page-level metrics into a single dict for AI
-        combined_metrics = {
-            "scope1_emissions_tco2e": [],
-            "scope2_emissions_tco2e": [],
-            "generic_metrics": []
-        }
-        
-        for page in data.get("page_metrics", []):
-            page_num = page.get("page")
-            
-            # Metrics already have the correct structure: {"value": X, "page": Y, "unit": Z}
-            # Just extend the lists directly
-            combined_metrics["scope1_emissions_tco2e"].extend(
-                page.get("scope1_emissions_tco2e", [])
-            )
-            combined_metrics["scope2_emissions_tco2e"].extend(
-                page.get("scope2_emissions_tco2e", [])
-            )
-            combined_metrics["generic_metrics"].extend(
-                page.get("generic_metrics", [])
-            )
-
-        # Deduplicate metrics
-        combined_metrics = deduplicate_metrics(combined_metrics)
-        
-        # Sample generic metrics to reduce payload size
-        original_count = len(combined_metrics.get('generic_metrics', []))
-        if original_count > 50:
-            combined_metrics['generic_metrics'] = sample_generic_metrics(
-                combined_metrics['generic_metrics'], 
-                max_samples=50
-            )
-            print(f"  Sampled {len(combined_metrics['generic_metrics'])} from {original_count} generic metrics", flush=True)
-        
-        # Get claims
-        claims = data.get("claims", [])
-        
-        # Prioritize claims if too many (reduces payload and rate limiting)
-        original_claim_count = len(claims)
-        if should_reduce_claims(claims):
-            claims = prioritize_claims(claims, max_claims=15)
-            print(f"  ⚠ Too many claims ({original_claim_count}), prioritized to {len(claims)} most critical", flush=True)
-        
-        print(f"  Found {len(claims)} claims", flush=True)
-        print(f"  Scope 1 metrics: {len(combined_metrics.get('scope1_emissions_tco2e', []))}", flush=True)
-        print(f"  Scope 2 metrics: {len(combined_metrics.get('scope2_emissions_tco2e', []))}", flush=True)
-        print(f"  Generic metrics: {len(combined_metrics.get('generic_metrics', []))}", flush=True)
-
-        # AI call
-        if claims:
-            print(f"  Calling Gemini AI...", flush=True)
-            ai_summary = call_gemini_ai(combined_metrics, claims, company, year)
-            
-            if ai_summary.get("overall_score") is not None:
-                print(f"  ✓ AI Score: {ai_summary.get('overall_score')}/5", flush=True)
-                successful += 1
-            else:
-                print(f"  ⚠ AI call succeeded but no valid score", flush=True)
-                failed += 1
-        else:
-            print(f"  ℹ No claims found, skipping AI audit", flush=True)
-            ai_summary = {
-                "overall_score": None,
-                "overall_summary": "No sustainability claims found in document",
-                "claim_reviews": []
-            }
-
-        # Final output: keep claims, remove page_metrics to reduce size
-        output = {
-            "company": company,
-            "year": year,
-            "source": data.get("source", "Sustainability Report"),
-            "schema_version": data.get("schema_version"),
-            "processed_at": data.get("processed_at"),
-            "claims": claims,
-            "ai_summary": ai_summary
-        }
-
-        output_path = os.path.join(OUTPUT_DIR, safe_filename(company, year))
-        with open(output_path, "w") as f:
-            json.dump(output, f, indent=2)
-
-        print(f"  ✓ Saved to {output_path}", flush=True)
-        
-        # Add delay between documents to avoid rate limiting
-        # Longer delay for documents with many claims
-        if len(claims) > 20:
-            delay = 10
-            print(f"  ⏸ Large document ({len(claims)} claims), waiting {delay}s before next...", flush=True)
-        elif len(claims) > 10:
-            delay = 5
-        else:
-            delay = 3
-        time.sleep(delay)
-
-    print(f"\n=== Audit Complete ===", flush=True)
-    print(f"Successful: {successful}", flush=True)
-    print(f"Failed/Skipped: {failed}", flush=True)
+        with open(out_path, "w") as f:
+            json.dump(result, f, indent=2)
 
 if __name__ == "__main__":
     main()
