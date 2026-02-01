@@ -1,9 +1,12 @@
 # Generated data
 data/raw_pdfs/
+data/intermediate_json/
 data/processed_json/
+
 
 # But allow samples
 !data/raw_pdfs/sample/
+!data/intermediate_json/sample/
 !data/processed_json/sample/
 
 # Byte-compiled / optimized / DLL files

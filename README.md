@@ -13,8 +13,4 @@ docker compose up --build scraper
 # Step 2: process
 docker compose up --build pdf_processor
 
-
 docker-compose stop (TO STOP)
-
-
-
