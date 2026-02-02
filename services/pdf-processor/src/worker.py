@@ -1,140 +1,299 @@
-"""
-PDF Processor Worker with Proper Naming and Supabase Integration
-"""
 import sys
 import os
 import json
 import time
 import re
+import traceback
+from datetime import datetime
 
 sys.path.append('/app')
 
 from shared.tasks import dequeue_task, enqueue_task
 from shared.database import get_supabase_client
-
 from processor import process_pdf
 
-def extract_company_year_from_filename(filename: str):
+def normalize_company_name(name: str) -> str:
     """
-    Extract company name and year from filename.
-    Expected format: Company_Name_2024.pdf
+    Normalize company names to a consistent canonical form.
+    Handles aliases, casing, and report-specific noise.
     """
-    # Remove .pdf extension
-    name_without_ext = filename.replace('.pdf', '').replace('.PDF', '')
+    if not name or not isinstance(name, str):
+        return "Unknown"
     
-    # Try to split by last underscore to get year
-    parts = name_without_ext.rsplit('_', 1)
+    # Standardize casing and whitespace
+    normalized = name.lower().strip()
+    normalized = re.sub(r'[^a-z0-9\s]', ' ', normalized)
+    normalized = ' '.join(normalized.split())
     
-    if len(parts) == 2 and parts[1].isdigit() and len(parts[1]) == 4:
-        company = parts[0].replace('_', ' ')
-        year = int(parts[1])
-        return company, year
-    else:
-        # If no year found, try to extract from content later
-        company = name_without_ext.replace('_', ' ')
-        return company, None
+    # Final fallback: title case with cleanup
+    return normalized.title() or "Unknown"
 
-def safe_filename(company, year):
-    """Generate safe filename for JSON output."""
-    return f"{company.replace(' ', '_')}_{year}.json"
+
+def extract_company_year_from_filename(filename: str):
+    if not filename:
+        return "Unknown", datetime.utcnow().year
+
+    name = re.sub(r'\.pdf$', '', filename, flags=re.IGNORECASE)
+    name = re.sub(r'[^a-zA-Z0-9\s_-]', ' ', name)
+    name = re.sub(r'[_\-]+', ' ', name)
+
+    name = ' '.join(name.split())
+
+    year = None
+
+    # Priority 1: Year at START
+    m = re.match(r'^(19\d{2}|20\d{2})\s+(.+)$', name)
+    if m:
+        year = int(m.group(1))
+        name = m.group(2)
+
+    # Priority 2: Year at END
+    if not year:
+        m = re.match(r'^(.+?)\s+(19\d{2}|20\d{2})$', name)
+        if m:
+            name = m.group(1)
+            year = int(m.group(2))
+
+    # Priority 3: Year anywhere
+    if not year:
+        m = re.search(r'\b(19\d{2}|20\d{2})\b', name)
+        if m:
+            year = int(m.group(1))
+            name = re.sub(rf'\b{year}\b', '', name)
+        
+
+    # Remove report noise
+    company = re.sub(
+        r'\b(sustainability|report|esg|annual|csr|corporate|responsibility)\b',
+        '',
+        name,
+        flags=re.IGNORECASE
+    )
+
+    company = ' '.join(company.split())
+
+    if not company:
+        company = "Unknown"
+
+    if not year:
+        year = datetime.utcnow().year
+
+    company = normalize_company_name(company)
+
+    return company, year
+
+
 
 def process_task(task):
-    """Process a PDF task and save to Supabase."""
+    """
+    Process a PDF task with robust metadata handling and normalization.
+    
+    Task structure expected:
+    {
+        "id": "uuid",
+        "filename": "original.pdf",
+        "path": "/path/to/file.pdf",
+        "uploaded_at": "iso8601",
+        "company": "optional_override",  
+        "year": 2024,                  
+        "metadata_source": "api_provided|filename_parsed"
+    }
+    """
     doc_id = task['id']
     file_path = task['path']
     original_filename = task.get('filename', f'{doc_id}.pdf')
     
-    print(f"\n{'='*60}")
-    print(f"📄 Processing PDF: {doc_id}")
-    print(f"   Original filename: {original_filename}")
-    print(f"   File path: {file_path}")
-    print(f"{'='*60}\n")
+    print(f"\n{'='*70}")
+    print(f"📄 PROCESSING PDF TASK: {doc_id}")
+    print(f"{'='*70}")
+    print(f"📁 Original filename: {original_filename}")
+    print(f"📍 File path: {file_path}")
+    print(f"⏰ Uploaded at: {task.get('uploaded_at', 'N/A')}")
     
     # Verify file exists
     if not os.path.exists(file_path):
-        print(f"✗ File not found: {file_path}")
+        error_msg = f"✗ File not found: {file_path}"
+        print(error_msg)
+        _log_error_to_supabase(doc_id, "file_not_found", error_msg)
         return False
     
     file_size = os.path.getsize(file_path)
-    print(f"✓ File exists, size: {file_size:,} bytes")
+    print(f"✓ File exists ({file_size:,} bytes)")
+    
+    # Determine company/year metadata (PRIORITY ORDER)
+    print(f"\n{'─'*70}")
+    print(f"📋 METADATA DETERMINATION")
+    print(f"{'─'*70}")
+    
+    # Priority 1: API-provided metadata (most reliable)
+    company = task.get('company')
+    year = task.get('year')
+    metadata_source = task.get('metadata_source', 'unknown')
+    
+    if company and year:
+        print(f"✅ Using API-provided metadata:")
+        print(f"   Company: '{company}' | Year: {year}")
+        metadata_source = "api_provided"
+    
+    # Priority 2: Filename parsing (fallback)
+    else:
+        print(f"⚠️  No API metadata provided - parsing filename...")
+        inferred_company, inferred_year = extract_company_year_from_filename(original_filename)
+        company = company or inferred_company or "Unknown"
+        year = year or inferred_year or datetime.utcnow().year
+        metadata_source = "filename_parsed"
+        print(f"   Inferred company: '{inferred_company}' | year: {inferred_year}")
+    
+    # NORMALIZE METADATA (critical for search consistency)
+    print(f"\n{'─'*70}")
+    print(f"🔧 NORMALIZING METADATA")
+    print(f"{'─'*70}")
+    
+    # Normalize company name to canonical form
+    normalized_company = normalize_company_name(company)
+    normalized_year = int(year)
+    
+    print(f"   Raw company: '{company}' → Normalized: '{normalized_company}'")
+    print(f"   Raw year: {year} → Normalized: {normalized_year}")
+    
+    # Special case: Prevent year-in-company-name issues
+    if str(normalized_year) in normalized_company:
+        clean_company = re.sub(r'\b' + str(normalized_year) + r'\b', '', normalized_company)
+        clean_company = ' '.join(clean_company.strip().split())
+        if clean_company and clean_company != normalized_company:
+            print(f"   ⚠️  Removed year from company name: '{normalized_company}' → '{clean_company}'")
+            normalized_company = clean_company
+    
+    # Process PDF with normalized metadata
+    print(f"\n{'─'*70}")
+    print(f"🔄 PROCESSING PDF CONTENT")
+    print(f"{'─'*70}")
     
     try:
-        # Extract company and year from original filename
-        company_from_filename, year_from_filename = extract_company_year_from_filename(original_filename)
-        
-        print(f"📋 Extracted from filename:")
-        print(f"   Company: {company_from_filename}")
-        print(f"   Year: {year_from_filename}")
-        
         # Run your existing PDF processor
-        print(f"\n🔄 Running PDF processor...")
         result = process_pdf(file_path)
         
-        # Use filename info if processor didn't find it
-        company = result.get('company') or company_from_filename or 'Unknown'
-        year = result.get('year') or year_from_filename or 2024
-        
-        # Override with filename info (more reliable)
-        if company_from_filename:
-            company = company_from_filename
-        if year_from_filename:
-            year = year_from_filename
-        
-        # Update result with correct naming
-        result['company'] = company
-        result['year'] = year
+        # Override processor's metadata with our normalized values (more reliable)
+        result['company'] = normalized_company
+        result['year'] = normalized_year
         result['document_id'] = doc_id
         result['original_filename'] = original_filename
+        result['metadata_source'] = metadata_source
         
-        # Save intermediate JSON with proper naming
+        # Add processing metadata
+        result['processed_at'] = datetime.utcnow().isoformat()
+        result['file_size_bytes'] = file_size
+        
+        print(f"✓ PDF processed successfully!")
+        print(f"   Company: {normalized_company}")
+        print(f"   Year: {normalized_year}")
+        print(f"   Claims extracted: {len(result.get('claims', []))}")
+        print(f"   Pages processed: {len(result.get('pages', []))}")
+        
+    except Exception as e:
+        error_msg = f"PDF processing failed: {str(e)}"
+        print(f"\n✗ {error_msg}")
+        traceback.print_exc()
+        _log_error_to_supabase(doc_id, "pdf_processing_error", error_msg)
+        return False
+    
+    # Save intermediate JSON with normalized naming
+    print(f"\n{'─'*70}")
+    print(f"💾 SAVING INTERMEDIATE RESULTS")
+    print(f"{'─'*70}")
+    
+    try:
         output_dir = "/data/intermediate_json"
         os.makedirs(output_dir, exist_ok=True)
         
-        output_filename = safe_filename(company, year)
+        # Generate safe filename using NORMALIZED values
+        safe_company = normalized_company.replace(' ', '_').replace('/', '_')
+        output_filename = f"{safe_company}_{normalized_year}.json"
         output_path = os.path.join(output_dir, output_filename)
         
-        with open(output_path, 'w') as f:
-            json.dump(result, f, indent=2)
+        with open(output_path, 'w', encoding='utf-8') as f:
+            json.dump(result, f, indent=2, ensure_ascii=False)
         
-        print(f"\n✓ PDF processed successfully!")
-        print(f"  Company: {company}")
-        print(f"  Year: {year}")
-        print(f"  Saved to: {output_path}")
-        print(f"  Claims found: {len(result.get('claims', []))}")
+        print(f"✓ Saved to: {output_path}")
         
-        # Enqueue for AI audit
+    except Exception as e:
+        error_msg = f"Failed to save intermediate JSON: {str(e)}"
+        print(f"✗ {error_msg}")
+        traceback.print_exc()
+        _log_error_to_supabase(doc_id, "save_error", error_msg)
+        return False
+    
+    # Enqueue for next stage (AI Audit) with normalized metadata
+    print(f"\n{'─'*70}")
+    print(f"📤 ENQUEUING FOR AI AUDIT")
+    print(f"{'─'*70}")
+    
+    try:
         audit_task = {
-            **task,
+            "id": doc_id,
+            "filename": original_filename,
+            "path": file_path,
             "intermediate_path": output_path,
-            "company": company,
-            "year": year,
+            "company": normalized_company,  
+            "year": normalized_year,       
             "document_id": doc_id,
-            "processed_at": time.time()
+            "metadata_source": metadata_source,
+            "processed_at": time.time(),
+            "claims_count": len(result.get('claims', []))
         }
         
-        print(f"\n📤 Enqueuing for AI audit...")
         enqueue_task("ai_audit", audit_task)
-        print(f"✓ Enqueued to ai_audit queue")
+        print(f"✓ Enqueued to 'ai_audit' queue")
+        print(f"   Company: '{normalized_company}' | Year: {normalized_year}")
         
-        return True
-    
     except Exception as e:
-        print(f"\n✗ Error processing {doc_id}: {e}")
-        import traceback
+        error_msg = f"Failed to enqueue audit task: {str(e)}"
+        print(f"✗ {error_msg}")
         traceback.print_exc()
+        _log_error_to_supabase(doc_id, "enqueue_error", error_msg)
         return False
+    
+    # Success summary
+    print(f"\n{'='*70}")
+    print(f"✅ TASK COMPLETED SUCCESSFULLY")
+    print(f"{'='*70}")
+    print(f"📄 Document ID: {doc_id}")
+    print(f"🏢 Company: {normalized_company}")
+    print(f"📅 Year: {normalized_year}")
+    print(f"📊 Claims: {len(result.get('claims', []))}")
+    print(f"📁 Output: {output_path}")
+    print(f"{'='*70}\n")
+    
+    return True
+
+
+def _log_error_to_supabase(doc_id: str, error_type: str, message: str):
+    """Log processing errors to Supabase for monitoring."""
+    try:
+        supabase = get_supabase_client()
+        supabase.table('processing_errors').insert({
+            'document_id': doc_id,
+            'error_type': error_type,
+            'message': message,
+            'worker': 'pdf_processor',
+            'timestamp': datetime.utcnow().isoformat()
+        }).execute()
+    except Exception as e:
+        print(f"⚠️  Failed to log error to Supabase: {e}")
+
 
 def main():
-    """Worker main loop."""
-    print("\n" + "="*60)
-    print("PDF PROCESSOR WORKER")
-    print("="*60)
+    """Worker main loop with health checks."""
+    print("\n" + "="*70)
+    print("📄 PDF PROCESSOR WORKER")
+    print("="*70)
     print(f"Working directory: {os.getcwd()}")
-    print(f"Data directory: {'/data' if os.path.exists('/data') else 'NOT FOUND'}")
-    print(f"raw_pdfs: {'/data/raw_pdfs' if os.path.exists('/data/raw_pdfs') else 'NOT FOUND'}")
-    print("="*60)
+    print(f"Data directories:")
+    print(f"  - raw_pdfs: {'✓' if os.path.exists('/data/raw_pdfs') else '✗ MISSING'}")
+    print(f"  - intermediate_json: {'✓' if os.path.exists('/data/intermediate_json') else '✗ MISSING'}")
+    print("="*70)
     
-    # Create directories if they don't exist
+    # Create required directories
     os.makedirs("/data/raw_pdfs", exist_ok=True)
     os.makedirs("/data/intermediate_json", exist_ok=True)
     
@@ -142,28 +301,26 @@ def main():
     
     while True:
         try:
-            # Block until task available (5 second timeout)
+            # Block until task available (5 second timeout for graceful shutdown)
             task = dequeue_task("pdf_processing", timeout=5)
             
             if task:
+                print(f"\n🔔 New task received: {task.get('id', 'unknown')}")
                 success = process_task(task)
-                if success:
-                    print(f"\n{'='*60}")
-                    print(f"✅ Task completed successfully")
-                    print(f"{'='*60}\n")
-                else:
-                    print(f"\n{'='*60}")
-                    print(f"❌ Task failed")
-                    print(f"{'='*60}\n")
+                
+                if not success:
+                    print(f"\n{'='*70}")
+                    print(f"❌ TASK FAILED - See logs above for details")
+                    print(f"{'='*70}\n")
                 
         except KeyboardInterrupt:
-            print("\n\n👋 Shutting down worker...")
+            print("\n\n👋 Shutting down worker gracefully...")
             break
         except Exception as e:
-            print(f"\n⚠️  Worker error: {e}")
-            import traceback
+            print(f"\n⚠️  UNEXPECTED WORKER ERROR: {e}")
             traceback.print_exc()
-            time.sleep(5)
+            time.sleep(5)  # Prevent tight error loops
+
 
 if __name__ == "__main__":
     main()
