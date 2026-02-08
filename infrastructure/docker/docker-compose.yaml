@@ -36,6 +36,23 @@ services:
       timeout: 10s
       retries: 3
 
+  # Frontend (Next.js)    
+  frontend:
+    build:
+      context: ../../services/frontend 
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://api:8000 
+    networks:
+      - ecolens-network
+    depends_on:
+      - api
+    restart: unless-stopped
+
   # PDF Processor Worker (Always Listening)
   pdf-worker:
     build:

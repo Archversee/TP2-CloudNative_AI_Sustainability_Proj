@@ -1,19 +1,14 @@
 # TP2-CloudNative_AI_Sustainability_Proj
-
-# DEPENDENCIES:
-pip install playwright
-python -m playwright install
-pip install pdfplumber
-pip install redis
-pip install fastapi uvicorn redis
-
-RUN:
-# Compose the microservice containers
+# TO RUN:
+# 1. Compose the microservice containers
 docker-compose up
 docker compose up --build
 
-docker compose down
+# 2. RUN Frontend
+localhost:3000
 
+# 3. Free resources
+docker compose down
 docker-compose stop (TO STOP)
 
 # TEST BACKEND APIS
