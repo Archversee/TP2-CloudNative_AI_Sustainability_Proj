@@ -103,51 +103,39 @@ def process_task(task):
     file_path = task['path']
     original_filename = task.get('filename', f'{doc_id}.pdf')
     
-    print(f"\n{'='*70}")
-    print(f"📄 PROCESSING PDF TASK: {doc_id}")
-    print(f"{'='*70}")
-    print(f"📁 Original filename: {original_filename}")
-    print(f"📍 File path: {file_path}")
-    print(f"⏰ Uploaded at: {task.get('uploaded_at', 'N/A')}")
+    print(f" PROCESSING PDF TASK: {doc_id}")
+    print(f" Original filename: {original_filename}")
+    print(f" File path: {file_path}")
+    print(f" Uploaded at: {task.get('uploaded_at', 'N/A')}")
     
     # Verify file exists
     if not os.path.exists(file_path):
-        error_msg = f"✗ File not found: {file_path}"
+        error_msg = f"File not found: {file_path}"
         print(error_msg)
         _log_error_to_supabase(doc_id, "file_not_found", error_msg)
         return False
     
     file_size = os.path.getsize(file_path)
-    print(f"✓ File exists ({file_size:,} bytes)")
+    print(f"File exists ({file_size:,} bytes)")
     
-    # Determine company/year metadata (PRIORITY ORDER)
-    print(f"\n{'─'*70}")
-    print(f"📋 METADATA DETERMINATION")
-    print(f"{'─'*70}")
-    
-    # Priority 1: API-provided metadata (most reliable)
+    # API-provided metadata (most reliable)
     company = task.get('company')
     year = task.get('year')
     metadata_source = task.get('metadata_source', 'unknown')
     
     if company and year:
-        print(f"✅ Using API-provided metadata:")
+        print(f" Using API-provided metadata:")
         print(f"   Company: '{company}' | Year: {year}")
         metadata_source = "api_provided"
     
-    # Priority 2: Filename parsing (fallback)
+    #Filename parsing (fallback)
     else:
-        print(f"⚠️  No API metadata provided - parsing filename...")
+        print(f" No API metadata provided - parsing filename...")
         inferred_company, inferred_year = extract_company_year_from_filename(original_filename)
         company = company or inferred_company or "Unknown"
         year = year or inferred_year or datetime.utcnow().year
         metadata_source = "filename_parsed"
         print(f"   Inferred company: '{inferred_company}' | year: {inferred_year}")
-    
-    # NORMALIZE METADATA (critical for search consistency)
-    print(f"\n{'─'*70}")
-    print(f"🔧 NORMALIZING METADATA")
-    print(f"{'─'*70}")
     
     # Normalize company name to canonical form
     normalized_company = normalize_company_name(company)
@@ -156,24 +144,19 @@ def process_task(task):
     print(f"   Raw company: '{company}' → Normalized: '{normalized_company}'")
     print(f"   Raw year: {year} → Normalized: {normalized_year}")
     
-    # Special case: Prevent year-in-company-name issues
+    # Prevent year-in-company-name issues
     if str(normalized_year) in normalized_company:
         clean_company = re.sub(r'\b' + str(normalized_year) + r'\b', '', normalized_company)
         clean_company = ' '.join(clean_company.strip().split())
         if clean_company and clean_company != normalized_company:
-            print(f"   ⚠️  Removed year from company name: '{normalized_company}' → '{clean_company}'")
+            print(f"Removed year from company name: '{normalized_company}' → '{clean_company}'")
             normalized_company = clean_company
     
-    # Process PDF with normalized metadata
-    print(f"\n{'─'*70}")
-    print(f"🔄 PROCESSING PDF CONTENT")
-    print(f"{'─'*70}")
-    
     try:
-        # Run your existing PDF processor
+        # Run PDF processor
         result = process_pdf(file_path)
         
-        # Override processor's metadata with our normalized values (more reliable)
+        # Override processor's metadata with normalized values
         result['company'] = normalized_company
         result['year'] = normalized_year
         result['document_id'] = doc_id
@@ -184,7 +167,7 @@ def process_task(task):
         result['processed_at'] = datetime.utcnow().isoformat()
         result['file_size_bytes'] = file_size
         
-        print(f"✓ PDF processed successfully!")
+        print(f" PDF processed successfully!")
         print(f"   Company: {normalized_company}")
         print(f"   Year: {normalized_year}")
         print(f"   Claims extracted: {len(result.get('claims', []))}")
@@ -192,15 +175,10 @@ def process_task(task):
         
     except Exception as e:
         error_msg = f"PDF processing failed: {str(e)}"
-        print(f"\n✗ {error_msg}")
+        print(f"\n{error_msg}")
         traceback.print_exc()
         _log_error_to_supabase(doc_id, "pdf_processing_error", error_msg)
         return False
-    
-    # Save intermediate JSON with normalized naming
-    print(f"\n{'─'*70}")
-    print(f"💾 SAVING INTERMEDIATE RESULTS")
-    print(f"{'─'*70}")
     
     try:
         output_dir = "/data/intermediate_json"
@@ -214,19 +192,17 @@ def process_task(task):
         with open(output_path, 'w', encoding='utf-8') as f:
             json.dump(result, f, indent=2, ensure_ascii=False)
         
-        print(f"✓ Saved to: {output_path}")
+        print(f" Saved to: {output_path}")
         
     except Exception as e:
         error_msg = f"Failed to save intermediate JSON: {str(e)}"
-        print(f"✗ {error_msg}")
+        print(f"{error_msg}")
         traceback.print_exc()
         _log_error_to_supabase(doc_id, "save_error", error_msg)
         return False
     
     # Enqueue for next stage (AI Audit) with normalized metadata
-    print(f"\n{'─'*70}")
-    print(f"📤 ENQUEUING FOR AI AUDIT")
-    print(f"{'─'*70}")
+    print(f" ENQUEUING FOR AI AUDIT")
     
     try:
         audit_task = {
@@ -243,26 +219,23 @@ def process_task(task):
         }
         
         enqueue_task("ai_audit", audit_task)
-        print(f"✓ Enqueued to 'ai_audit' queue")
-        print(f"   Company: '{normalized_company}' | Year: {normalized_year}")
+        print(f"Enqueued to 'ai_audit' queue")
+        print(f"Company: '{normalized_company}' | Year: {normalized_year}")
         
     except Exception as e:
         error_msg = f"Failed to enqueue audit task: {str(e)}"
-        print(f"✗ {error_msg}")
+        print(f"{error_msg}")
         traceback.print_exc()
         _log_error_to_supabase(doc_id, "enqueue_error", error_msg)
         return False
     
     # Success summary
-    print(f"\n{'='*70}")
-    print(f"✅ TASK COMPLETED SUCCESSFULLY")
-    print(f"{'='*70}")
-    print(f"📄 Document ID: {doc_id}")
-    print(f"🏢 Company: {normalized_company}")
-    print(f"📅 Year: {normalized_year}")
-    print(f"📊 Claims: {len(result.get('claims', []))}")
-    print(f"📁 Output: {output_path}")
-    print(f"{'='*70}\n")
+    print(f" TASK COMPLETED SUCCESSFULLY")
+    print(f" Document ID: {doc_id}")
+    print(f" Company: {normalized_company}")
+    print(f" Year: {normalized_year}")
+    print(f" Claims: {len(result.get('claims', []))}")
+    print(f" Output: {output_path}")
     
     return True
 
@@ -279,25 +252,19 @@ def _log_error_to_supabase(doc_id: str, error_type: str, message: str):
             'timestamp': datetime.utcnow().isoformat()
         }).execute()
     except Exception as e:
-        print(f"⚠️  Failed to log error to Supabase: {e}")
+        print(f"  Failed to log error to Supabase: {e}")
 
 
 def main():
     """Worker main loop with health checks."""
-    print("\n" + "="*70)
-    print("📄 PDF PROCESSOR WORKER")
-    print("="*70)
+    print(" PDF PROCESSOR WORKER")
     print(f"Working directory: {os.getcwd()}")
-    print(f"Data directories:")
-    print(f"  - raw_pdfs: {'✓' if os.path.exists('/data/raw_pdfs') else '✗ MISSING'}")
-    print(f"  - intermediate_json: {'✓' if os.path.exists('/data/intermediate_json') else '✗ MISSING'}")
-    print("="*70)
     
     # Create required directories
     os.makedirs("/data/raw_pdfs", exist_ok=True)
     os.makedirs("/data/intermediate_json", exist_ok=True)
     
-    print("\n⏳ Waiting for tasks on 'pdf_processing' queue...\n")
+    print("\n Waiting for tasks on 'pdf_processing' queue...\n")
     
     while True:
         try:
@@ -305,19 +272,17 @@ def main():
             task = dequeue_task("pdf_processing", timeout=5)
             
             if task:
-                print(f"\n🔔 New task received: {task.get('id', 'unknown')}")
+                print(f"\n New task received: {task.get('id', 'unknown')}")
                 success = process_task(task)
                 
                 if not success:
-                    print(f"\n{'='*70}")
-                    print(f"❌ TASK FAILED - See logs above for details")
-                    print(f"{'='*70}\n")
+                    print(f" TASK FAILED - See logs above for details")
                 
         except KeyboardInterrupt:
-            print("\n\n👋 Shutting down worker gracefully...")
+            print("\n\n Shutting down worker gracefully...")
             break
         except Exception as e:
-            print(f"\n⚠️  UNEXPECTED WORKER ERROR: {e}")
+            print(f"\n  UNEXPECTED WORKER ERROR: {e}")
             traceback.print_exc()
             time.sleep(5)  # Prevent tight error loops
 

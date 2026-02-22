@@ -27,9 +27,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ============================================================================
 # Request/Response Models
-# ============================================================================
 
 class SearchRequest(BaseModel):
     query: str
@@ -51,10 +49,7 @@ class SearchResponse(BaseModel):
     confidence: str
     num_sources: int
 
-# ============================================================================
 # Health & Status Endpoints
-# ============================================================================
-
 @app.get("/health")
 def health_check():
     """Health check endpoint."""
@@ -69,10 +64,7 @@ def get_status():
         "embeddings_queue": get_queue_length("embeddings")
     }
 
-# ============================================================================
 # Document Upload & Processing
-# ============================================================================
-
 @app.post("/api/upload")
 async def upload_pdf(
     file: UploadFile = File(...),
@@ -139,10 +131,7 @@ def get_document_status(doc_id: str):
             "message": "Document is being processed"
         }
 
-# ============================================================================
 # Company Data Endpoints
-# ============================================================================
-
 @app.get("/api/companies")
 def list_companies():
     """List all processed companies."""
@@ -193,10 +182,7 @@ def get_company_history(company: str):
         "years_covered": len(result.data)
     }
 
-# ============================================================================
 # RAG Search Endpoints
-# ============================================================================
-
 def generate_query_embedding(query: str) -> List[float]:
     """Generate embedding for search query."""
     try:
@@ -375,7 +361,7 @@ def search_documents(request: SearchRequest):
     }
     """
     
-    # Step 1: Semantic search
+    # Semantic search
     chunks = semantic_search(
         query=request.query,
         company=request.company,
@@ -393,7 +379,7 @@ def search_documents(request: SearchRequest):
             num_sources=0
         )
     
-    # Step 2: Generate answer with RAG
+    # Generate answer with RAG
     rag_result = generate_rag_response(request.query, chunks)
     
     return SearchResponse(
@@ -428,10 +414,6 @@ def search_documents_get(
     )
     
     return search_documents(request)
-
-# ============================================================================
-# Additional RAG Endpoints
-# ============================================================================
 
 @app.get("/api/companies/{company}/claims")
 def get_company_claims(company: str, year: Optional[int] = None):
@@ -504,10 +486,7 @@ def compare_companies(
         "comparison": results
     }
 
-# ============================================================================
 # Utility Endpoints
-# ============================================================================
-
 @app.get("/api/stats")
 def get_statistics():
     """Get overall system statistics."""

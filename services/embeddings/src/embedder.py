@@ -24,7 +24,7 @@ def generate_embedding_local(text: str) -> List[float]:
     try:
         from sentence_transformers import SentenceTransformer
         
-        # Load model (downloads on first use, ~100MB)
+        # Load model
         model = SentenceTransformer('all-MiniLM-L6-v2')
         
         # Generate embedding (384 dimensions)
@@ -68,14 +68,11 @@ def process_chunks_file(chunks_file: str, use_local: bool = True):
     failed = 0
     
     for i, chunk in enumerate(chunks):
-        # Generate embedding
-        if use_local:
-            embedding = generate_embedding_local(chunk['content'])
-        else:
-            embedding = generate_embedding_openai(chunk['content'])
+        # Generate embedding       
+        embedding = generate_embedding_local(chunk['content'])
         
         if embedding is None:
-            print(f"  ✗ Failed to generate embedding for chunk {i}")
+            print(f"   Failed to generate embedding for chunk {i}")
             failed += 1
             continue
         
@@ -91,7 +88,7 @@ def process_chunks_file(chunks_file: str, use_local: bool = True):
         if not use_local:
             time.sleep(0.1)  # For API calls
     
-    print(f"  ✓ Stored {successful} chunks, {failed} failed")
+    print(f"   Stored {successful} chunks, {failed} failed")
     return successful, failed
 
 def process_all_chunks(use_local: bool = True):
@@ -160,7 +157,7 @@ def store_report_metadata(processed_json_dir: str = "/data/processed_json"):
                 "company": report_data.get('company'),
                 "year": report_data.get('year'),
                 "source": report_data.get('source', 'Sustainability Report'),
-                "leaf_rating": ai_summary.get('overall_score'),  # 1-5 becomes leaf rating
+                "leaf_rating": ai_summary.get('overall_score'), 
                 "truth_score": ai_summary.get('overall_score'),
                 "ai_summary": ai_summary.get('overall_summary', ''),
                 "claims": report_data.get('claims', []),
@@ -170,11 +167,11 @@ def store_report_metadata(processed_json_dir: str = "/data/processed_json"):
             }
             
             result = supabase.table('company_reports').upsert(data).execute()
-            print(f"  ✓ Stored metadata for {data['company']} ({data['year']})")
+            print(f"   Stored metadata for {data['company']} ({data['year']})")
             successful += 1
         
         except Exception as e:
-            print(f"  ✗ Failed to store {json_file}: {e}")
+            print(f"   Failed to store {json_file}: {e}")
     
     print(f"\nStored {successful} report metadata entries")
 
@@ -203,7 +200,7 @@ def generate_embeddings(chunks: List[Dict], doc_id: str, use_local: bool = True)
         else:
             failed += 1
 
-    print(f"✓ Embeddings complete for {doc_id}: {successful} stored, {failed} failed")
+    print(f"Embeddings complete for {doc_id}: {successful} stored, {failed} failed")
     return {"successful": successful, "failed": failed}
 
 

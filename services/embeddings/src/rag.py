@@ -30,7 +30,7 @@ def semantic_search(
     query: str,
     company: str = None,
     year: int = None,
-    match_threshold: float = 0.7,
+    match_threshold: float = 0.3,
     match_count: int = 5
 ) -> List[Dict]:
     """

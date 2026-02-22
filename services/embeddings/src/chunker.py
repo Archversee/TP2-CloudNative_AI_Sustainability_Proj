@@ -128,7 +128,7 @@ def chunk_document(report_data: dict) -> list:
     company = report_data.get('company', 'Unknown Company')
     year = report_data.get('year', 0)
     
-    # Strategy 1: Chunk from AI summary (overall context)
+    # Chunk from AI summary (overall context)
     ai_summary = report_data.get('ai_summary', {})
     if ai_summary.get('overall_summary'):
         summary_text = ai_summary.get('overall_summary', '')
@@ -146,7 +146,7 @@ def chunk_document(report_data: dict) -> list:
             }
         })
     
-    # Strategy 2: Create chunks from claims
+    # Create chunks from claims
     claims = report_data.get('claims', [])
     
     for idx, claim in enumerate(claims, start=1):
@@ -207,7 +207,7 @@ def chunk_document(report_data: dict) -> list:
                 }
             })
     
-    # Strategy 3: If no chunks created, try extracting from page_metrics
+    # If no chunks created, try extracting from page_metrics
     if not chunks and 'page_metrics' in report_data:
         for page_data in report_data.get('page_metrics', [])[:5]:  # First 5 pages
             page_num = page_data.get('page', 0)
@@ -264,16 +264,13 @@ def process_all_pdfs():
             with open(output_path, 'w') as f:
                 json.dump(chunks, f, indent=2)
             
-            print(f"✓ Created {len(chunks)} chunks → {output_path}")
+            print(f" Created {len(chunks)} chunks → {output_path}")
             total_chunks += len(chunks)
             total_files += 1
         else:
-            print(f"✗ No chunks created for {pdf_file}")
+            print(f" No chunks created for {pdf_file}")
     
-    print(f"\n=== Chunking Complete ===")
-    print(f"Files processed: {total_files}")
-    print(f"Total chunks: {total_chunks}")
-    print(f"Average chunks per file: {total_chunks/total_files if total_files > 0 else 0:.1f}")
+    print(f"\n Chunking Complete - Processed {total_files} PDFs, created {total_chunks} chunks")
 
 if __name__ == "__main__":
     process_all_pdfs()
