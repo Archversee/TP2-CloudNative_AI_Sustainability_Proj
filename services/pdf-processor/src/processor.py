@@ -719,7 +719,6 @@ def process_pdf(file_path):
 
                 page_metrics.append({
                     "page": page_num,
-                    "text": text,
                     "scope1_emissions_tco2e": scope1,
                     "scope2_emissions_tco2e": scope2,
                     "scope3_emissions_tco2e": scope3,
