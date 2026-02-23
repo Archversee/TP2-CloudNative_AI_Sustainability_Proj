@@ -20,8 +20,8 @@ GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
 def safe_filename(company, year):
     return f"{company.replace(' ', '_')}_{year}.json"
 
+#Remove duplicate metric entries by value & page.
 def deduplicate_metrics(metrics):
-    """Remove duplicate metric entries by value & page."""
     dedup = {}
     for key, entries in metrics.items():
         seen = set()
@@ -44,8 +44,8 @@ def deduplicate_metrics(metrics):
         dedup[key] = clean_list
     return dedup
 
+# Intelligently sample generic metrics to reduce payload size.
 def sample_generic_metrics(metrics, max_samples=50):
-    """Intelligently sample generic metrics to reduce payload size."""
     if len(metrics) <= max_samples:
         return metrics
     
@@ -73,12 +73,9 @@ def sample_generic_metrics(metrics, max_samples=50):
     return sampled[:max_samples]
 
 def should_reduce_claims(claims):
-    """Determine if we need to reduce claims to avoid rate limiting."""
-    # If more than 20 claims, we might hit rate limits
     return len(claims) > 20
 
 def prioritize_claims(claims, max_claims=15):
-    """Prioritize and limit claims to most important ones."""
     if len(claims) <= max_claims:
         return claims
     
@@ -98,8 +95,8 @@ def prioritize_claims(claims, max_claims=15):
     
     return sorted_claims[:max_claims]
 
+# Robustly parse JSON from AI response, handling markdown code blocks and common formatting issues.
 def parse_ai_json(raw_text):
-    """Extract JSON object from AI output, handling markdown code blocks."""
     try:
         return json.loads(raw_text)
     except json.JSONDecodeError:
@@ -120,8 +117,8 @@ def parse_ai_json(raw_text):
                 pass
     return None
 
+# Aggregate all relevant metrics for a claim based on its page and content.
 def aggregate_claim_metrics(claim, page_metrics):
-    """Aggregate all relevant metrics for a specific claim from page_metrics."""
     claim_page = claim.get("page")
     claim_text = claim.get("claim", "").lower()
     
@@ -281,8 +278,8 @@ def call_gemini_ai(metrics, claims, company, year):
     
     return create_fallback_response(claims, "Max retries exceeded")
 
+# Validate that AI response has correct structure and reasonable values.
 def validate_ai_response(response, claims):
-    """Validate that AI response has correct structure and reasonable values."""
     if not isinstance(response, dict):
         return False
     
@@ -306,8 +303,8 @@ def validate_ai_response(response, claims):
     
     return True
 
+# Create a fallback response when AI call fails.
 def create_fallback_response(claims, error_msg):
-    """Create a fallback response when AI call fails."""
     return {
         "overall_score": None,
         "overall_summary": f"Audit failed: {error_msg}",
@@ -323,11 +320,8 @@ def create_fallback_response(claims, error_msg):
         ]
     }
 
+# --- Main document audit function ---
 def audit_document(data: dict) -> dict:
-    """
-    Run AI audit on a single document JSON dict
-    and return the processed result.
-    """
     company = data.get("company", "UNKNOWN")
     year = data.get("year", "UNKNOWN")
 

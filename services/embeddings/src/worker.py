@@ -1,6 +1,3 @@
-"""
-Embeddings Worker - Integrates chunker.py and embedder.py for RAG
-"""
 import sys
 import os
 import json

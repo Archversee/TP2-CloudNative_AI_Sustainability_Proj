@@ -3,8 +3,6 @@ kind: Deployment
 metadata:
   name: api
   namespace: ecoeye
-  labels:
-    app: api
 spec:
   replicas: 2
   selector:
@@ -24,6 +22,11 @@ spec:
         env:
         - name: REDIS_URL
           value: "redis://redis:6379"
+        - name: GEMINI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: ecoeye-secrets
+              key: GEMINI_API_KEY
         - name: SUPABASE_URL
           valueFrom:
             secretKeyRef:
@@ -34,46 +37,43 @@ spec:
             secretKeyRef:
               name: ecoeye-secrets
               key: SUPABASE_ANON_KEY
-        - name: GEMINI_API_KEY
-          valueFrom:
-            secretKeyRef:
-              name: ecoeye-secrets
-              key: GEMINI_API_KEY
+        volumeMounts:                    
+        - name: data                  
+          mountPath: /data               
         resources:
           requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
             memory: "512Mi"
             cpu: "500m"
-          limits:
-            memory: "1Gi"
-            cpu: "1000m"
         livenessProbe:
           httpGet:
             path: /health
             port: 8000
           initialDelaySeconds: 30
           periodSeconds: 10
-          timeoutSeconds: 5
         readinessProbe:
           httpGet:
             path: /health
             port: 8000
           initialDelaySeconds: 10
           periodSeconds: 5
-          timeoutSeconds: 3
+      volumes:                           
+      - name: data                       
+        persistentVolumeClaim:        
+          claimName: ecoeye-data
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: api
   namespace: ecoeye
-  labels:
-    app: api
 spec:
-  type: NodePort 
+  type: NodePort
   selector:
     app: api
   ports:
-  - port: 8000
-    targetPort: 8000
-    nodePort: 30800 
-    protocol: TCP
+    - port: 8000
+      targetPort: 8000
+      nodePort: 30800

@@ -13,6 +13,16 @@ sys.path.append('/app')
 from shared.tasks import enqueue_task, get_queue_length
 from shared.database import get_supabase_client
 
+from sentence_transformers import SentenceTransformer
+
+print("Loading embedding model (this takes ~10 seconds)...", flush=True)
+try:
+    EMBEDDING_MODEL = SentenceTransformer('all-MiniLM-L6-v2')
+    print(" Embedding model loaded successfully", flush=True)
+except Exception as e:
+    print(f" Failed to load embedding model: {e}", flush=True)
+    EMBEDDING_MODEL = None
+
 app = FastAPI(title="EcoEye API", version="1.0.0")
 
 app.add_middleware(
@@ -27,7 +37,6 @@ app.add_middleware(
 )
 
 # Request/Response Models
-
 class SearchRequest(BaseModel):
     query: str
     company: Optional[str] = None
@@ -183,11 +192,16 @@ def get_company_history(company: str):
 
 # RAG Search Endpoints
 def generate_query_embedding(query: str) -> List[float]:
-    """Generate embedding for search query."""
+    """Generate embedding for search query using pre-loaded model."""
+    if EMBEDDING_MODEL is None:
+        raise HTTPException(
+            status_code=500, 
+            detail="Embedding model not loaded. Please restart the API."
+        )
+    
     try:
-        from sentence_transformers import SentenceTransformer
-        model = SentenceTransformer('all-MiniLM-L6-v2')
-        embedding = model.encode(query, convert_to_numpy=True)
+        # Use the pre-loaded global model
+        embedding = EMBEDDING_MODEL.encode(query, convert_to_numpy=True)
         return embedding.tolist()
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating embedding: {str(e)}")
@@ -267,6 +281,68 @@ def manual_vector_search(
     results.sort(key=lambda x: x['similarity'], reverse=True)
     return results[:limit]
 
+def call_gemini_api(prompt: str, max_retries: int = 3) -> dict:
+    """
+    Call Gemini API with secure error handling.
+    API key is never logged or exposed in errors.
+    """
+    import os
+    import requests
+    import time
+    
+    gemini_api_key = os.getenv("GEMINI_API_KEY")
+    if not gemini_api_key:
+        raise HTTPException(status_code=500, detail="AI service not configured")
+    
+    # Base URL without key (safe for logging)
+    base_url = "https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent"
+    
+    payload = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {
+            "temperature": 0.2,
+            "maxOutputTokens": 2000
+        }
+    }
+    
+    for attempt in range(max_retries):
+        try:
+            # Add key only in the actual request
+            response = requests.post(
+                base_url,
+                params={"key": gemini_api_key}, 
+                json=payload,
+                timeout=30
+            )
+            
+            if response.status_code == 429:
+                if attempt < max_retries - 1:
+                    wait_time = (2 ** attempt) * 2
+                    print(f"WARNING: Rate limited (attempt {attempt + 1}/{max_retries}). Waiting {wait_time}s...", flush=True)
+                    time.sleep(wait_time)
+                    continue
+                else:
+                    raise HTTPException(
+                        status_code=429,
+                        detail="AI service rate limit exceeded. Please try again in a few moments."
+                    )
+            
+            response.raise_for_status()
+            return response.json()
+        
+        except requests.exceptions.RequestException as e:
+            print(f"ERROR: Request error (attempt {attempt + 1}/{max_retries}): {type(e).__name__}", flush=True)
+            
+            if attempt == max_retries - 1:
+                raise HTTPException(
+                    status_code=503,
+                    detail="AI service temporarily unavailable"
+                )
+            time.sleep(2 ** attempt)
+    
+    raise HTTPException(status_code=503, detail="AI service unavailable after retries")
+
+
 def generate_rag_response(query: str, context_chunks: List[dict]) -> dict:
     """Generate AI response using retrieved context chunks."""
     
@@ -277,13 +353,12 @@ def generate_rag_response(query: str, context_chunks: List[dict]) -> dict:
             "confidence": "low"
         }
     
-    # Build context from chunks
+    # Build context
     context_text = "\n\n".join([
         f"[Source: {chunk['company']} {chunk['year']} Report, Page {chunk['page']}]\n{chunk['content']}"
         for chunk in context_chunks
     ])
     
-    # Create prompt for Gemini
     prompt = f"""You are an ESG sustainability expert analyzing corporate sustainability reports.
 
 USER QUESTION:
@@ -309,39 +384,25 @@ INSTRUCTIONS:
 
 Respond with ONLY the JSON, no markdown or extra text."""
 
-    # Call Gemini API
-    import os
-    import requests
-    
-    gemini_api_key = os.getenv("GEMINI_API_KEY")
-    if not gemini_api_key:
-        raise HTTPException(status_code=500, detail="GEMINI_API_KEY not configured")
-    
-    url = f"https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key={gemini_api_key}"
-    
-    payload = {
-        "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {
-            "temperature": 0.2,
-            "maxOutputTokens": 2000
-        }
-    }
-    
     try:
-        response = requests.post(url, json=payload, timeout=30)
-        response.raise_for_status()
+        # Use secure API call function
+        response_data = call_gemini_api(prompt)
         
-        raw_text = response.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
-        
-        # Parse JSON response
+        raw_text = response_data["candidates"][0]["content"]["parts"][0]["text"].strip()
         clean_text = re.sub(r'```json\s*|\s*```', '', raw_text)
         result = json.loads(clean_text)
         
         return result
     
+    except HTTPException:
+        # Re-raise FastAPI exceptions
+        raise
+    
     except Exception as e:
+        # Generic error without details
+        print(f"ERROR: Unexpected error in RAG: {type(e).__name__}", flush=True)
         return {
-            "answer": f"Sorry, I encountered an error generating the response: {str(e)}",
+            "answer": "Sorry, I encountered an error processing your request.",
             "citations": [],
             "confidence": "low"
         }
