@@ -13,6 +13,7 @@ interface Stats {
 
 export function StatsSection() {
   const [stats, setStats] = useState<Stats | null>(null)
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
   useEffect(() => {
     fetchStats()
@@ -20,8 +21,7 @@ export function StatsSection() {
 
   const fetchStats = async () => {
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-      const response = await axios.get(`${API_URL}/api/stats`)
+      const response = await axios.get(`${apiUrl}/api/stats`)
       setStats(response.data)
     } catch (err) {
       console.error('Failed to fetch stats:', err)

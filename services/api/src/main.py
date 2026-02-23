@@ -1,6 +1,3 @@
-"""
-EcoLens API with RAG Search Capabilities
-"""
 from fastapi import FastAPI, Form, HTTPException, UploadFile, File, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -16,12 +13,14 @@ sys.path.append('/app')
 from shared.tasks import enqueue_task, get_queue_length
 from shared.database import get_supabase_client
 
-app = FastAPI(title="EcoLens API", version="1.0.0")
+app = FastAPI(title="EcoEye API", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
         allow_origins=[
-        "http://localhost:3000", 
+        "http://localhost:3000",      # Docker Compose frontend
+        "http://localhost:30300",     # Kubernetes frontend
+        "http://frontend:3000",       # Docker Compose internal
     ],
     allow_methods=["*"],
     allow_headers=["*"],
@@ -53,7 +52,7 @@ class SearchResponse(BaseModel):
 @app.get("/health")
 def health_check():
     """Health check endpoint."""
-    return {"status": "healthy", "service": "ecolens-api"}
+    return {"status": "healthy", "service": "EcoEye-api"}
 
 @app.get("/api/status")
 def get_status():

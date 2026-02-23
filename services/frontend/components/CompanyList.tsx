@@ -17,6 +17,7 @@ export function CompanyList() {
   const [companies, setCompanies] = useState<Company[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
   useEffect(() => {
     fetchCompanies()
@@ -24,8 +25,7 @@ export function CompanyList() {
 
   const fetchCompanies = async () => {
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-      const response = await axios.get(`${API_URL}/api/companies`)
+      const response = await axios.get(`${apiUrl}/api/companies`)
       setCompanies(response.data.companies || [])
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to load companies')

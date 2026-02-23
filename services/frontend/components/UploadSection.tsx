@@ -20,6 +20,7 @@ export function UploadSection() {
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<UploadResponse | null>(null)
   const [error, setError] = useState('')
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0]
@@ -57,11 +58,9 @@ export function UploadSection() {
       if (year.trim()) {
         formData.append('year', year.trim())
       }
-
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
       
       const response = await axios.post<UploadResponse>(
-        `${API_URL}/api/upload`,
+        `${apiUrl}/api/upload`,
         formData,
         {
           headers: {
@@ -90,7 +89,7 @@ export function UploadSection() {
     <div className="space-y-6">
       {/* Upload Form */}
       <div className="card">
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">📤 Upload Sustainability Report</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-4"> Upload Sustainability Report</h2>
         <p className="text-gray-600 mb-6">
           Upload a PDF sustainability report for AI-powered greenwashing analysis
         </p>
@@ -208,7 +207,7 @@ export function UploadSection() {
               </div>
               <div className="mt-4 p-3 bg-white rounded border border-green-200">
                 <p className="text-sm text-gray-700">
-                  🔄 Your document is being processed through our AI pipeline:
+                   Your document is being processed through our AI pipeline:
                 </p>
                 <ol className="text-sm text-gray-600 mt-2 ml-4 list-decimal space-y-1">
                   <li>PDF extraction</li>
@@ -226,7 +225,7 @@ export function UploadSection() {
 
       {/* Instructions */}
       <div className="card bg-blue-50 border-blue-200">
-        <h4 className="font-semibold text-blue-900 mb-3">📋 Filename Format</h4>
+        <h4 className="font-semibold text-blue-900 mb-3"> Filename Format</h4>
         <p className="text-blue-800 text-sm mb-2">
           For automatic company/year extraction, name your file:
         </p>

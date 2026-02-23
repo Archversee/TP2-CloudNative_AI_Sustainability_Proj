@@ -5,7 +5,7 @@ import './globals.css'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'EcoLens - ESG Greenwashing Detection',
+  title: 'EcoEye - ESG Greenwashing Detection',
   description: 'AI-powered sustainability report analysis and greenwashing detection',
 }
 

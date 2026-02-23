@@ -1,6 +1,3 @@
-"""
-Enhanced chunker.py that works with both raw PDFs and audited JSON
-"""
 import pdfplumber
 import os
 import json

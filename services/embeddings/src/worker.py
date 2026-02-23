@@ -87,13 +87,9 @@ def main():
                 success = process_task(task)
                 
                 if success:
-                    print(f"\n{'='*60}")
                     print(f" Embeddings stored successfully")
-                    print(f"{'='*60}\n")
                 else:
-                    print(f"\n{'='*60}")
                     print(f" Embeddings generation failed")
-                    print(f"{'='*60}\n")
                 
         except KeyboardInterrupt:
             print("\n\n Shutting down worker...")

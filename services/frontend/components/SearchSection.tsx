@@ -25,6 +25,7 @@ export function SearchSection() {
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<SearchResponse | null>(null)
   const [error, setError] = useState('')
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -36,9 +37,7 @@ export function SearchSection() {
     setResult(null)
 
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-      
-      const response = await axios.post<SearchResponse>(`${API_URL}/api/search`, {
+      const response = await axios.post<SearchResponse>(`${apiUrl}/api/search`, {
         query: query.trim(),
         company: company.trim() || null,
         match_threshold: 0.4,
@@ -66,7 +65,7 @@ export function SearchSection() {
     <div className="space-y-6">
       {/* Search Form */}
       <div className="card">
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">🔍 Semantic Search</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-4"> Semantic Search</h2>
         <p className="text-gray-600 mb-6">
           Ask questions about sustainability reports and get AI-powered answers with citations
         </p>
@@ -150,7 +149,7 @@ export function SearchSection() {
           {/* Citations */}
           {result.citations.length > 0 && (
             <div className="card">
-              <h3 className="text-xl font-bold text-gray-900 mb-4">📚 Citations</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-4"> Citations</h3>
               
               <div className="space-y-3">
                 {result.citations.map((citation, idx) => (
@@ -170,7 +169,7 @@ export function SearchSection() {
 
       {/* Example Queries */}
       <div className="card bg-gray-50">
-        <h4 className="font-semibold text-gray-900 mb-3">💡 Example Queries:</h4>
+        <h4 className="font-semibold text-gray-900 mb-3"> Example Queries:</h4>
         <div className="flex flex-wrap gap-2">
           {[
             'What are the net zero targets?',

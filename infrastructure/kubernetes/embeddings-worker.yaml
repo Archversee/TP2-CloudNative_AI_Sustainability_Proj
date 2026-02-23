@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: embeddings-worker
+  namespace: ecoeye
+  labels:
+    app: embeddings-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: embeddings-worker
+  template:
+    metadata:
+      labels:
+        app: embeddings-worker
+    spec:
+      containers:
+      - name: embeddings-worker
+        image: docker-embeddings-worker:latest
+        imagePullPolicy: Never
+        command: ["python", "src/worker.py"]
+        env:
+        - name: REDIS_URL
+          value: "redis://redis:6379"
+        - name: SUPABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: ecoeye-secrets
+              key: SUPABASE_URL
+        - name: SUPABASE_ANON_KEY
+          valueFrom:
+            secretKeyRef:
+              name: ecoeye-secrets
+              key: SUPABASE_ANON_KEY
+        volumeMounts:
+        - name: data
+          mountPath: /data
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+          limits:
+            memory: "4Gi"
+            cpu: "2000m"
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: ecoeye-data

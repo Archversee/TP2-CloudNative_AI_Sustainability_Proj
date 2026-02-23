@@ -398,10 +398,10 @@ def process_pdf(file_path):
                 # Detect claims with improved context extraction
                 for kw in CLAIM_KEYWORDS:
                     if kw.lower() in text.lower():
-                        # Extract sentence-based context (better than character window)
-                        context = extract_sentence_context(text, kw, num_sentences=2)
+                        # Extract sentence-based context
+                        context = extract_sentence_context(text, kw, num_sentences=3)
                         
-                        # If sentence extraction failed, fallback to character window
+                        # Fallback to character window
                         if not context or len(context) < 50:
                             context = extract_claim_context(text, kw, window=300)
                         

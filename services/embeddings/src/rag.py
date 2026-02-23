@@ -1,8 +1,3 @@
-"""
-RAG Query Service for EcoLens Phase 3
-Performs semantic search and generates AI-powered answers with citations
-"""
-
 import os
 from typing import List, Dict
 from dotenv import load_dotenv

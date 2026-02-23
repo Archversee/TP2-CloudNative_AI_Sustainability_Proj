@@ -26,6 +26,7 @@ export default function CompanyPage() {
   const [data, setData] = useState<CompanyData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
   useEffect(() => {
     fetchCompanyData()
@@ -33,10 +34,9 @@ export default function CompanyPage() {
 
   const fetchCompanyData = async () => {
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
       const url = year
-        ? `${API_URL}/api/companies/${encodeURIComponent(company)}?year=${year}`
-        : `${API_URL}/api/companies/${encodeURIComponent(company)}`
+        ? `${apiUrl}/api/companies/${encodeURIComponent(company)}?year=${year}`
+        : `${apiUrl}/api/companies/${encodeURIComponent(company)}`
       
       const response = await axios.get(url)
       setData(response.data)

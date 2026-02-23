@@ -258,7 +258,6 @@ def _log_error_to_supabase(doc_id: str, error_type: str, message: str):
 def main():
     """Worker main loop with health checks."""
     print(" PDF PROCESSOR WORKER")
-    print(f"Working directory: {os.getcwd()}")
     
     # Create required directories
     os.makedirs("/data/raw_pdfs", exist_ok=True)
