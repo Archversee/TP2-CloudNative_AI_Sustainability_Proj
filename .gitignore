@@ -10,14 +10,7 @@ data/processed_json/
 
 node_modules/
 
-# AI Assistant files
-*.aider*
-.aider*
-*.xml
-*.anthropic*
-.anthropic*
-.cursor/
-.continue/
+
 
 # IDE and Editor files
 .vscode/

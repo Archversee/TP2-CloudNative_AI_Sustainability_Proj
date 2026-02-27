@@ -41,7 +41,7 @@ export default function Home() {
             </p>
           </div>
 
-          {/* Stats Section */}
+          {/* Stats Section */}push
           <div className="max-w-7xl mx-auto px-6 pb-12">
             <StatsSection />
           </div>
