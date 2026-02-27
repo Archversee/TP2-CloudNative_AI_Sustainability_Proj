@@ -10,6 +10,23 @@ data/processed_json/
 
 node_modules/
 
+# AI Assistant files
+*.aider*
+.aider*
+*.xml
+*.anthropic*
+.anthropic*
+.cursor/
+.continue/
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

@@ -31,35 +31,44 @@ export function StatsSection() {
   if (!stats) return null
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-      <div className="card text-center">
-        <div className="flex justify-center mb-3">
-          <FileText className="w-8 h-8 text-primary-600" />
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* Reports Analyzed Card */}
+      <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8 text-center border border-white/20 shadow-2xl hover:bg-white/15 transition-all">
+        <div className="flex justify-center mb-4">
+          <div className="w-16 h-16 bg-green-600/30 rounded-full flex items-center justify-center">
+            <FileText className="w-8 h-8 text-white" strokeWidth={2} />
+          </div>
         </div>
-        <h3 className="text-3xl font-bold text-gray-900 mb-1">
+        <h3 className="text-5xl font-bold text-white mb-2">
           {stats.total_reports}
         </h3>
-        <p className="text-gray-600">Reports Analyzed</p>
+        <p className="text-white font-medium text-base">Reports Analyzed</p>
       </div>
 
-      <div className="card text-center">
-        <div className="flex justify-center mb-3">
-          <Building2 className="w-8 h-8 text-primary-600" />
+      {/* Companies Card */}
+      <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8 text-center border border-white/20 shadow-2xl hover:bg-white/15 transition-all">
+        <div className="flex justify-center mb-4">
+          <div className="w-16 h-16 bg-green-600/30 rounded-full flex items-center justify-center">
+            <Building2 className="w-8 h-8 text-white" strokeWidth={2} />
+          </div>
         </div>
-        <h3 className="text-3xl font-bold text-gray-900 mb-1">
+        <h3 className="text-5xl font-bold text-white mb-2">
           {stats.unique_companies}
         </h3>
-        <p className="text-gray-600">Companies</p>
+        <p className="text-white font-medium text-base">Companies</p>
       </div>
 
-      <div className="card text-center">
-        <div className="flex justify-center mb-3">
-          <Database className="w-8 h-8 text-primary-600" />
+      {/* Document Chunks Card */}
+      <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8 text-center border border-white/20 shadow-2xl hover:bg-white/15 transition-all">
+        <div className="flex justify-center mb-4">
+          <div className="w-16 h-16 bg-green-600/30 rounded-full flex items-center justify-center">
+            <Database className="w-8 h-8 text-white" strokeWidth={2} />
+          </div>
         </div>
-        <h3 className="text-3xl font-bold text-gray-900 mb-1">
+        <h3 className="text-5xl font-bold text-white mb-2">
           {stats.total_chunks}
         </h3>
-        <p className="text-gray-600">Document Chunks</p>
+        <p className="text-white font-medium text-base">Document Chunks</p>
       </div>
     </div>
   )
