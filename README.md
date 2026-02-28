@@ -3,6 +3,11 @@
 ### Required
 -  Docker Desktop installed
 -  `.env` file in project root:
+      `.env` file shoukd contain
+        GEMINI_API_KEY=YOUR_KEY
+        SUPABASE_URL=YOUR_URL
+        SUPABASE_ANON_KEY=YOUR_ANON_KEY
+        NEXT_PUBLIC_API_URL=http://api:8000
 ### For Kubernetes
 -  Enable Kubernetes in Docker Desktop
 

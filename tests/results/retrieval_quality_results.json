@@ -1,0 +1,118 @@
+{
+  "default_threshold_results": [
+    {
+      "query": "What are Fairprice's Scope 1 emissions?",
+      "category": "numeric",
+      "threshold": 0.4,
+      "num_results": 4,
+      "precision": 0.75,
+      "recall": 1.5,
+      "mrr": 1.0,
+      "retrieved_pages": [
+        16,
+        16,
+        16,
+        15
+      ],
+      "expected_pages": [
+        16,
+        40
+      ],
+      "answer": "Based on the provided context, Fairprice's specific Scope 1 emissions data is not explicitly stated. However, the report mentions actions that imply management of Scope 1 emissions, such as \"Switching to low-impact refrigerants for all upcoming and renovated stores\" and \"Transitioning our owned and contracted fleet of delivery vehicles to electric vehicles\" (Fairprice, 2024, Page 16). The report also mentions a \"Revision in Scope 1 and Scope 2 base year Given the limitations in collecting accurate...\" (Fairprice, 2024, Page 16), suggesting that they are tracking and revising their Scope 1 emissions, but the actual figures are not provided. The report also mentions defining the scope of climate-related risks and opportunities, including Scope 1 emissions (Fairprice, 2024, Page 15).",
+      "confidence": "low"
+    },
+    {
+      "query": "What are PUB's Scope 2 emissions?",
+      "category": "numeric",
+      "threshold": 0.4,
+      "num_results": 4,
+      "precision": 1.0,
+      "recall": 2.0,
+      "mrr": 1.0,
+      "retrieved_pages": [
+        49,
+        49,
+        48,
+        48
+      ],
+      "expected_pages": [
+        48,
+        49
+      ],
+      "answer": "PUB's Scope 2 emissions are included in the \"Total Scope 1 and 2 emissions\" data reported in their sustainability report. The report states that the \"Total Scope 1 and 2 emissions is a sum of Scope 1 and market-based Scope 2 emissions\" (Pub, 2025, Page 49). The combined Scope 1 and 2 emissions were 247.0 ktCO2e in 2022, 229.9 ktCO2e in 2023, and 237.9 ktCO2e in 2024 (Pub, 2025, Page 49). The report also provides data on non-renewable and renewable electricity consumption (Pub, 2025, Page 48), which are related to Scope 2 emissions.",
+      "confidence": "high"
+    },
+    {
+      "query": "When does Fairprice target net zero?",
+      "category": "target",
+      "threshold": 0.4,
+      "num_results": 1,
+      "precision": 1.0,
+      "recall": 0.3333333333333333,
+      "mrr": 1.0,
+      "retrieved_pages": [
+        6
+      ],
+      "expected_pages": [
+        4,
+        6,
+        12
+      ],
+      "answer": "Fairprice aims to achieve net-zero in its operations by 2045 (Fairprice, 2024, Page 6).",
+      "confidence": "high"
+    },
+    {
+      "query": "What is SGX's net zero target year?",
+      "category": "target",
+      "threshold": 0.4,
+      "num_results": 2,
+      "precision": 0.5,
+      "recall": 0.5,
+      "mrr": 1.0,
+      "retrieved_pages": [
+        21,
+        4
+      ],
+      "expected_pages": [
+        21,
+        23
+      ],
+      "answer": "Based on the provided context, SGX has two net-zero target years: 2050 (Sgx 2025 Report, Page 21) and 2026 (Sgx 2025 Report, Page 4).",
+      "confidence": "high"
+    },
+    {
+      "query": "Compare renewable energy usage",
+      "category": "comparative",
+      "threshold": 0.4,
+      "num_results": 3,
+      "companies_found": 2,
+      "answer": "Fairprice (2024) reports a 1.6% renewable energy penetration in 2024, demonstrating the impact of their solar initiatives (Fairprice 2024 Report, 2024, Page 17). They also report 5,726 MWh of solar energy generated (Fairprice 2024 Report, 2024, Page 16). Pub (2025) reports renewable energy consumption of 177.2 GWh in 2022, 179.4 GWh in 2023, and 167.4 GWh in 2024 (Pub 2025 Report, 2025, Page 48)."
+    }
+  ],
+  "threshold_sensitivity": {
+    "0.3": {
+      "precision": 0.8125,
+      "recall": 0.8333333333333334,
+      "mrr": 1.0,
+      "avg_results": 2.25
+    },
+    "0.4": {
+      "precision": 0.8125,
+      "recall": 0.8333333333333334,
+      "mrr": 1.0,
+      "avg_results": 2.25
+    },
+    "0.5": {
+      "precision": 0.8125,
+      "recall": 0.8333333333333334,
+      "mrr": 1.0,
+      "avg_results": 2.25
+    },
+    "0.6": {
+      "precision": 0.8125,
+      "recall": 0.7083333333333334,
+      "mrr": 1.0,
+      "avg_results": 2.0
+    }
+  }
+}
