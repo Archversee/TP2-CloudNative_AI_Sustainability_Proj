@@ -53,7 +53,6 @@ TEST_QUERIES = [
         "category": "comparative"
     },
     
-    # Add more test queries based on your actual data
 ]
 
 def search_query(query: str, company: str = None, year: int = None, 
