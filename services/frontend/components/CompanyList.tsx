@@ -79,7 +79,7 @@ export function CompanyList() {
   if (companies.length === 0) {
     return (
       <div className="card text-center py-12">
-        <p className="text-gray-600 mb-4">No companies analyzed yet</p>
+        <p className="text-gray-600 mb-4">No companies analysed yet</p>
         <p className="text-sm text-gray-500">Upload a sustainability report to get started!</p>
       </div>
     )
@@ -88,7 +88,7 @@ export function CompanyList() {
   return (
     <div className="space-y-6">
       <div className="card">
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">📊 Analyzed Companies</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-4"> Analysed Companies</h2>
         <p className="text-gray-600 mb-6">
           Browse {companies.length} company report{companies.length !== 1 ? 's' : ''} with AI-generated sustainability scores
         </p>

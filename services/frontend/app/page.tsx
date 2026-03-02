@@ -37,11 +37,11 @@ export default function Home() {
               AI-Powered ESG Greenwashing Detection
             </h2>
             <p className="text-sm md:text-base text-white/90 font-light max-w-3xl">
-              Upload sustainability reports, analyze claims, and get truth scores powered by Gemini AI
+              Upload sustainability reports, analyse claims, and get truth scores powered by Gemini AI
             </p>
           </div>
 
-          {/* Stats Section */}push
+          {/* Stats Section */}
           <div className="max-w-7xl mx-auto px-6 pb-12">
             <StatsSection />
           </div>

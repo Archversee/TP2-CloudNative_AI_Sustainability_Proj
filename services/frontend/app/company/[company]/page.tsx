@@ -114,7 +114,7 @@ export default function CompanyPage() {
       {/* AI Summary */}
       {data.ai_summary && (
         <div className="card mb-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-3">🤖 AI Analysis</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-3"> AI Analysis</h2>
           <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
             {data.ai_summary}
           </p>
@@ -149,7 +149,7 @@ export default function CompanyPage() {
       {/* Claims */}
       {data.claims && data.claims.length > 0 && (
         <div className="card">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">📋 Sustainability Claims</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-4"> Sustainability Claims</h2>
           <div className="space-y-4">
             {data.claims.map((claim, idx) => (
               <div key={idx} className="border-l-4 border-primary-500 pl-4 py-2">

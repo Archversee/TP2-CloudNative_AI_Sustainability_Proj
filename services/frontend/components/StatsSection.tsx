@@ -32,7 +32,7 @@ export function StatsSection() {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      {/* Reports Analyzed Card */}
+      {/* Reports Analysed Card */}
       <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8 text-center border border-white/20 shadow-2xl hover:bg-white/15 transition-all">
         <div className="flex justify-center mb-4">
           <div className="w-16 h-16 bg-green-600/30 rounded-full flex items-center justify-center">
@@ -42,7 +42,7 @@ export function StatsSection() {
         <h3 className="text-5xl font-bold text-white mb-2">
           {stats.total_reports}
         </h3>
-        <p className="text-white font-medium text-base">Reports Analyzed</p>
+        <p className="text-white font-medium text-base">Reports Analysed</p>
       </div>
 
       {/* Companies Card */}

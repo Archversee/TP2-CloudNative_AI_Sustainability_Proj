@@ -663,8 +663,6 @@ Complete journey from PDF upload to searchable insights:
 - [ ] **Horizontal Pod Autoscaler (HPA)** for automatic scaling based on CPU/memory
 - [ ] **Multi-zone deployment** for high availability
 - [ ] **Ingress controller** replacing NodePort (standard ports 80/443)
-- [ ] **Persistent volume backups** and disaster recovery
-- [ ] **Managed Redis** (AWS ElastiCache, Google Memorystore)
 - [ ] **TLS/SSL certificates** for secure communication
 
 ### AI & Search Enhancements
@@ -675,22 +673,11 @@ Complete journey from PDF upload to searchable insights:
 - [ ] **Comparative analysis:** Multi-company sustainability benchmarking
 - [ ] **Time-series analysis:** Year-over-year trend detection
 
-### Observability & Monitoring
-- [ ] **Prometheus** metrics collection
-- [ ] **Grafana** dashboards for system health
-- [ ] **Distributed tracing** with Jaeger
-- [ ] **Centralized logging** with ELK stack
-- [ ] **Alerting** on queue depth, pod failures, API latency
-- [ ] **Custom metrics:** Search quality, processing times
-
 ### Feature Additions
-- [ ] **User authentication** and multi-tenancy
 - [ ] **Report comparison** tool
 - [ ] **Export functionality** (CSV, JSON, PDF reports)
-- [ ] **Email notifications** on processing completion
-- [ ] **Batch upload** support
 - [ ] **Historical trending** dashboards
 
-
 ##  Authors
-- **Group W Team 2** - 
+- **Group W Team 2** 
+Built for Dell Cloud Native Award Competition 
