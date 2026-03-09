@@ -150,22 +150,102 @@ The system transforms unstructured PDFs into searchable knowledge through three 
 - Stores vectors in Supabase with pgvector extension
 - Creates IVF-Flat index (100 clusters) for O(√n) similarity search
 
-**Storage schema:**
+**Vector Storage Setup:**
 ```sql
-CREATE TABLE document_chunks (
-  id UUID PRIMARY KEY,
-  document_id UUID,
-  company TEXT,
-  year INTEGER,
-  page INTEGER,
-  content TEXT,
-  embedding vector(384),  -- pgvector type
-  created_at TIMESTAMP
+-- Enable pgvector extension (run once)
+CREATE EXTENSION IF NOT EXISTS vector;
+
+-- Document chunks for semantic search
+CREATE TABLE IF NOT EXISTS document_chunks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  document_id UUID,                    -- Links to company_reports
+  company TEXT NOT NULL,
+  year INT NOT NULL,
+  page INT NOT NULL,
+  content TEXT NOT NULL,               -- Original PDF text chunk
+  embedding vector(384),               -- 384-dim from all-MiniLM-L6-v2
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  
+  UNIQUE(document_id, page, content)   -- Prevent duplicate chunks
 );
 
+-- Company reports for dashboard overview
+CREATE TABLE IF NOT EXISTS company_reports (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  document_id UUID UNIQUE,             -- Matches document_chunks
+  company TEXT NOT NULL,
+  year INT NOT NULL,
+  source TEXT,                         -- "Sustainability Report"
+  leaf_rating INT CHECK (leaf_rating BETWEEN 1 AND 5),
+  truth_score DECIMAL,
+  ai_summary TEXT,
+  claims JSONB,                        -- Array of analyzed claims
+  scope1_total DECIMAL,                -- Total Scope 1 emissions (tCO2e)
+  scope2_total DECIMAL,                -- Total Scope 2 emissions (tCO2e)
+  scope3_total DECIMAL,                -- Total Scope 3 emissions (tCO2e)
+  claims_analyzed_count INT,           -- Number of claims sent to AI
+  processed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  
+  UNIQUE(company, year)                -- One report per company per year
+);
+
+-- Vector similarity index for fast cosine search
 CREATE INDEX ON document_chunks 
 USING ivfflat (embedding vector_cosine_ops)
 WITH (lists = 100);
+
+-- Performance index for company/year filtering
+CREATE INDEX idx_chunks_company_year ON document_chunks(company, year);
+CREATE INDEX idx_reports_company_year ON company_reports(company, year);
+```
+**Semantic Search Function:**
+```sql
+-- Search function for RAG retrieval
+CREATE OR REPLACE FUNCTION search_documents(
+  query_embedding vector(384),
+  match_threshold FLOAT DEFAULT 0.4,
+  match_count INT DEFAULT 5,
+  filter_company TEXT DEFAULT NULL,
+  filter_year INT DEFAULT NULL
+)
+RETURNS TABLE (
+  id UUID,
+  document_id UUID,
+  company TEXT,
+  year INT,
+  page INT,
+  content TEXT,
+  similarity FLOAT
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    dc.id,
+    dc.document_id,
+    dc.company,
+    dc.year,
+    dc.page,
+    dc.content,
+    1 - (dc.embedding <=> query_embedding) AS similarity
+  FROM document_chunks dc
+  WHERE 
+    -- Optional company filter (case-insensitive partial match)
+    (filter_company IS NULL 
+     OR LOWER(dc.company) LIKE '%' || LOWER(filter_company) || '%')
+    
+    -- Optional year filter
+    AND (filter_year IS NULL OR dc.year = filter_year)
+    
+    -- Similarity threshold (τ = 0.4 optimal based on evaluation)
+    AND 1 - (dc.embedding <=> query_embedding) > match_threshold
+    
+  ORDER BY dc.embedding <=> query_embedding  -- Ascending = most similar first
+  LIMIT match_count;
+END;
+$$;
 ```
 
 ---
