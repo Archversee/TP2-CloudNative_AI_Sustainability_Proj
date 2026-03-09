@@ -1,116 +1,62 @@
-# TP2-CloudNative_AI_Sustainability_Proj
-## Prerequisites
-### Required
--  Docker Desktop installed
--  `.env` file in project root:
-      `.env` file shoukd contain
-        GEMINI_API_KEY=YOUR_KEY
-        SUPABASE_URL=YOUR_URL
-        SUPABASE_ANON_KEY=YOUR_ANON_KEY
-        NEXT_PUBLIC_API_URL=http://api:8000
-### For Kubernetes
--  Enable Kubernetes in Docker Desktop
+# EcoEye: AI-Powered Sustainability Report Analysis Platform
 
-## Deployment Commands
-### Make Script Executable 
+**A cloud-native microservices platform that grants access to corporate ESG data through AI-powered analysis and semantic search.**
+
+EcoEye transforms dense, technical sustainability reportsinto searchable, interpretable insights for non-expert stakeholders including retail investors, consumers, and community members. The system leverages Retrieval-Augmented Generation (RAG) architecture to extract, verify, and semantically index corporate environmental commitments.
+
+### Prerequisites
+
+**Required:**
+- Docker Desktop with Kubernetes enabled
+- `.env` file in project root:
+```env
+  GEMINI_API_KEY=your_gemini_api_key
+  SUPABASE_URL=your_supabase_url
+  SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+**For Kubernetes Deployment:**
+- Enable Kubernetes in Docker Desktop Settings
+
+### Installation
+```bash
+# 1. Clone repository
+
+# 2. Make deployment script executable
 chmod +x deployment.sh
 
-## Kubernetes (Production)
-### Start (REBUILDS images & deploys pods LARGE CONTEXT - 30 MINUTES)
+# 3. Create .env file with your credentials
+.env
+# Edit .env with your API keys
+
+# 4. Deploy to Kubernetes (production-ready)
 ./deployment.sh start k8s
-### Start (Deploys pods ONLY - 2 Minutes)
-./deployment.sh start k8s --skip-build
-**Access (with NodePort):**
-- Frontend: http://localhost:30300
-- API: http://localhost:30800
-### Stop (Keeps namespace & secrets)
-./deployment.sh stop k8s
-### Stop & Cleanup (Removes everything)
-./deployment.sh stop k8s --cleanup
-### View Available Pods
-./deployment.sh logs k8s
-### Check Status (Shows pods, services, secrets)
-./deployment.sh status k8s
+```
+---
 
-##  Rebuild Commands
-### Rebuild All Images
-./deployment.sh rebuild all
-### Rebuild Frontend Only (Rebuilds for K8 port 30800)
-./deployment.sh rebuild frontend
-**Use this when:**
-- Updating frontend code
+##  Key Features
 
-### Kubernetes (NodePort)
-- Frontend: http://localhost:30300
-- API: http://localhost:30800
-- API Docs: http://localhost:30800/docs
+### For End Users
+-  **Natural Language Search** - Ask questions like "What are this company's Scope 1 emissions?"
+-  **Interactive Dashboards** - Visualize ESG metrics, leaf ratings (1-5 scale), and trends
+-  **Automated Analysis** - 57-second average processing time for 50-page reports
+-  **Citation Tracking** - Every claim linked to source document pages
+-  **Confidence Scoring** - AI-generated confidence levels (high/medium/low)
 
-
-## Docker Compose (LEGACY, faster for Development)
-### Start (Builds images & starts containers)
-./deployment.sh start compose
-**Access:**
-- Frontend: http://localhost:3000
-- API: http://localhost:8000
-### Stop (Keeps data)
-./deployment.sh stop compose
-### Stop & Cleanup (Removes all data)
-./deployment.sh stop compose --cleanup
-### View Log
-./deployment.sh logs compose
-### Check Status
-./deployment.sh status compose
-### Rebuild Frontend Only (Rebuilds for Compose port 3000)
-cd infrastructure/docker
-docker-compose up --build frontend
-
-## Access URLs
-### Docker Compose
-- Frontend: http://localhost:3000
-- API: http://localhost:8000
-- API Docs: http://localhost:8000/docs
-
-
-
-**AI-Powered Sustainability Report Analysis Platform**
-A cloud-native microservices platform that leverages AI and advanced NLP techniques to analyze corporate sustainability reports. The system extracts, processes, and makes searchable sustainability data from PDF reports using a Retrieval-Augmented Generation (RAG) architecture.
-
-### Key Features
--  **Automated PDF extraction** and AI-powered sustainability auditing
--  **Semantic search** using vector embeddings (384-dimensional)
--  **Cloud-native deployment** on Kubernetes with self-healing capabilities
--  **Dual deployment** support: Docker Compose for development, Kubernetes for production
--  **Real-time processing** pipeline with Redis-based task queuing
--  **Intelligent chunking** with sentence boundary detection
--  **AI-powered analysis** using Google Gemini 2.0 Flash
+### For Developers
+-  **Cloud-Native Architecture** - Kubernetes orchestration with self-healing
+-  **Asynchronous Processing** - Redis-based task queues for parallel workflows
+-  **AI-Powered Extraction** - 100+ ESG keyword taxonomy with intelligent prioritization
+-  **Vector Embeddings** - 384-dimensional semantic search (all-MiniLM-L6-v2)
+-  **Horizontal Scaling** - Independent scaling per microservice
+-  **Secrets Management** - Kubernetes-native credential injection
 
 ---
 
 ##  System Architecture
 
-### Microservices Overview
-EcoEye implements a distributed microservices architecture with six core services, each containerized and independently scalable:
-
-1. **API Gateway**  
-    Stack: FastAPI, Python 3.11, Uvicorn 
-    Responsibilites: RESTful endpoints, CORS handling, task orchestration, RAG search coordination
-2. **Frontend** 
-    Stack: Next.js 13+, React, TypeScript, Tailwind CSS
-    Responsibilites: User interface, PDF upload, semantic search, company dashboards, visualization
-3. **PDF Worker** 
-    Stack: Python, PyPDF2, pdfplumber, Poppler
-    Responsibilites: Text extraction, metadata parsing, 500-character context chunking with sentence boundaries
-4. **AI Worker**
-    Stack: Google Gemini 2.0 Flash, Python
-    Responsibilites: Sustainability claim extraction, leaf rating (1-5), scope 1/2 emissions analysis, AI summaries
-5. **Embeddings Worker**
-    Stack: Sentence Transformers, all-MiniLM-L6-v2
-    Responsibilites: 384-dimensional vector generation, Supabase pgvector storage, cosine similarity indexing
-6. **Redis Queue**
-    Stack: Redis 7 Alpine
-    Responsibilites: Asynchronous task queue, worker coordination, processing pipeline orchestration
-
 ### Architecture Diagram
+```
 ┌─────────────┐
 │   Frontend  │ ◄─── User uploads PDF
 │  (Next.js)  │
@@ -122,302 +68,188 @@ EcoEye implements a distributed microservices architecture with six core service
 │  (FastAPI)  │      │    Queue    │
 └──────┬──────┘      └──────┬──────┘
        │                    │
+       │                    ▼
+       │         ┌────────────────────────────────┐
+       │         │   Worker Pipeline              │
+       │         │  ┌─────┐  ┌─────┐  ┌───────────┐
+       │         │  │ PDF │─►│ AI  │─►│ Embedding │
+       │         │  └─────┘  └─────┘  └───────────┘
+       │         └────────────────────────────────┘
        │                    │
        ▼                    ▼
-┌─────────────────────────────────────┐
-│         Worker Pipeline             │
-│  ┌──────┐  ┌──────┐  ┌──────────┐   │
-│  │ PDF  │─►│  AI  │─►│Embeddings│   │
-│  │Worker│  │Worker│  │  Worker  │   │
-│  └──────┘  └──────┘  └──────────┘   │
-└─────────────────────────────────────┘
-       │
-       ▼
-┌─────────────┐
-│  Supabase   │
-│  PostgreSQL │
-│  + pgvector │
-└─────────────┘
+┌─────────────────────────────┐
+│       Supabase              │
+│  PostgreSQL + pgvector      │
+└─────────────────────────────┘
+```
+| Service | Technology | Responsibilities | Resources |
+|---------|-----------|------------------|-----------|
+| **API Gateway** | FastAPI, Python 3.11 | RESTful endpoints, CORS, task orchestration, RAG coordination | 250-500m CPU, 256-512Mi RAM |
+| **Frontend** | Next.js 14, TypeScript, Tailwind | PDF upload, search interface, dashboards, visualization | 250-500m CPU, 256-512Mi RAM |
+| **PDF Worker** | pdfplumber, PyPDF2, Poppler | Text extraction, Scope 1/2/3 detection, 100+ keyword matching | 250-500m CPU, 256-512Mi RAM |
+| **AI Worker** | Gemini 2.0 Flash | Claim prioritization (top 30), LLM auditing (temp=0.1), leaf rating | 250-500m CPU, 256-512Mi RAM |
+| **Embeddings Worker** | all-MiniLM-L6-v2 | 384-dim vector generation, pgvector indexing | 500-1000m CPU, 512Mi-1Gi RAM |
+| **Redis Queue** | Redis 7 Alpine | Asynchronous task queues, worker coordination | 100-250m CPU, 128-256Mi RAM |
 
-## Processing Pipeline
-The system implements a three-stage processing pipeline:
-### Stage 1: PDF Extraction
-**PDF Worker processes uploaded documents:**
+### Cloud-Native Features
+
+ **Containerization** - Docker multi-stage builds with minimal base images  
+ **Health Monitoring** - Liveness/readiness probes with automatic restart  
+ **Secrets Management** - Kubernetes Secrets with environment variable injection  
+ **Service Discovery** - DNS-based internal communication  
+ **Declarative Infrastructure** - YAML-based configuration (GitOps-ready)  
+ **Fault Isolation** - Independent service failures don't cascade  
+ **Horizontal Scaling** - `kubectl scale` for manual scaling, HPA-ready
+
+##  Processing Pipeline
+
+The system transforms unstructured PDFs into searchable knowledge through three stages:
+
+### Stage 1: PDF Extraction & Keyword Detection
+
+**PDF Worker responsibilities:**
 - Filename parsing extracts company name and year
-- Text extraction using pdfplumber with OCR fallback
-- Intelligent chunking: 500-character segments with sentence boundary detection
-- Metadata preservation: page numbers, context windows, source tracking
+- Page-by-page text extraction using pdfplumber
+- **100+ keyword taxonomy** organized into 7 categories:
+  - **Emissions** (41): scope 1/2/3, GHG, carbon footprint, methane
+  - **Targets** (29): net-zero, carbon neutral, SBTi, Paris Agreement
+  - **Energy** (16): renewable energy, solar, wind, energy efficiency
+  - **Resources** (12): water consumption, waste, circular economy
+  - **Nature** (9): biodiversity, deforestation, ecosystem
+  - **Social** (8): employee safety, diversity, human rights
+  - **Standards** (10): GRI, TCFD, CDP, SASB, ISO 14001
+- Pattern matching for Scope 1/2/3 emissions with 50+ regex patterns
+- Context extraction (300-character windows around keywords)
+- Output: Intermediate JSON with page-level metrics
 
-**Chunking Algorithm:**
-```python
-def chunk_text(text, chunk_size=500):
-    """
-    Splits text into chunks while preserving sentence boundaries.
-    
-    - Target: 500 characters per chunk
-    - Breaks only at sentence boundaries (., !, ?)
-    - Maintains context with overlapping windows
-    """
-    chunks = []
-    current_chunk = ""
-    
-    for sentence in split_sentences(text):
-        if len(current_chunk) + len(sentence) <= chunk_size:
-            current_chunk += sentence
-        else:
-            if current_chunk:
-                chunks.append(current_chunk)
-            current_chunk = sentence
-    
-    if current_chunk:
-        chunks.append(current_chunk)
-    
-    return chunks
-```
+### Stage 2: AI Auditing & Claim Prioritization
 
-### Stage 2: AI Auditing
-**AI Worker analyzes sustainability reports:**
-- Gemini 2.0 Flash processes full report text
-- Structured JSON extraction with strict schema validation
-- Leaf rating calculation (1-5 scale) based on comprehensive metrics
-- Scope 1/2 emissions extraction and normalization
-- Sustainability claims with page citations and target years
-- Executive summary generation with evidence-based analysis
+**AI Worker responsibilities:**
+- **Intelligent claim filtering** - Reduces 87 claims → 30 high-priority claims
+  - Scoring algorithm (0-100 points):
+    - Keyword priority (0-40): High (net-zero, scope emissions), Medium (renewable energy), Low (general terms)
+    - Evidence quality (0-30): Numeric data, commitment language, target years
+    - Context richness (0-20): Text length and completeness
+    - Metric availability (0-10): Associated emissions data
+- **LLM auditing** via Gemini 2.0 Flash (temperature=0.1, maxTokens=4000)
+- **Structured output** - JSON with leaf rating (1-5), claim reviews, confidence scores
+- **Retry logic** - Exponential backoff (2s, 4s, 8s) for API rate limits (15 req/min free tier)
+- Output: Processed JSON stored in Supabase `company_reports` table
 
-**AI Prompt Structure:**
-```
-ROLE: ESG sustainability expert analyzing corporate reports
+**Prompt Engineering Structure:**
+1. **Role Assignment** - "Audit sustainability claims for {company} ({year})"
+2. **Structured Input** - JSON with deduplicated metrics (Scope 1/2/3, sampled to 50 entries) and claims with context
+3. **Scoring Rubric** - Explicit 5-point scale (1=No evidence → 5=Fully supported)
+4. **Output Format** - Strict JSON schema without markdown
 
-INPUT: Full report text (chunked)
+### Stage 3: Vector Embedding & Indexing
 
-OUTPUT: JSON schema
-{
-  "leaf_rating": 1-5,
-  "scope1_total": number,
-  "scope2_total": number,
-  "claims": [
-    {
-      "claim": "string",
-      "page": number,
-      "target_year": number,
-      "context": "string"
-    }
-  ],
-  "ai_summary": "string"
-}
+**Embeddings Worker responsibilities:**
+- **Model**: all-MiniLM-L6-v2 (22.7M parameters, 384 dimensions)
+- Generates embeddings for each claim context (~50ms per embedding)
+- Stores vectors in Supabase with pgvector extension
+- Creates IVF-Flat index (100 clusters) for O(√n) similarity search
 
-CONSTRAINTS:
-- Temperature: 0.2 (deterministic)
-- Max tokens: 2000
-- Fact-based extraction only
-```
-
-### Stage 3: Vector Embedding
-**Embeddings Worker creates searchable vectors:**
-- Sentence Transformers (all-MiniLM-L6-v2) for semantic encoding
-- 384-dimensional dense vectors per chunk
-- Supabase pgvector extension for similarity search
-- Cosine similarity indexing for fast retrieval
-
-**Embedding Process:**
-```python
-from sentence_transformers import SentenceTransformer
-
-model = SentenceTransformer('all-MiniLM-L6-v2')
-
-# Generate embedding for each chunk
-for chunk in chunks:
-    embedding = model.encode(chunk, convert_to_numpy=True)
-    # embedding.shape = (384,)
-    
-    # Store in Supabase with pgvector
-    supabase.table('document_chunks').insert({
-        'content': chunk,
-        'embedding': embedding.tolist(),
-        'company': company,
-        'year': year,
-        'page': page_num
-    })
-```
-
-##  RAG Architecture
-### Vector Embedding Strategy
-The system uses the Sentence Transformers library with the **all-MiniLM-L6-v2** model, chosen for its balance of performance and computational efficiency:
-
-**Model Specifications:**
-- **Model:** all-MiniLM-L6-v2 (22.7M parameters)
-- **Embedding dimension:** 384 (optimized for semantic similarity)
-- **Max sequence length:** 256 tokens
-- **Similarity metric:** Cosine similarity (range: -1 to 1)
-- **Default threshold:** 0.3 (tuned for sustainability domain recall)
-
-**Why all-MiniLM-L6-v2?**
-- Fast inference (~50ms per query)
-- Small model size (~90MB)
-- High quality semantic representations
-- Optimized for sentence-level similarity
-- Good performance on domain-specific text
-
-### Semantic Search Implementation
-The RAG pipeline implements a hybrid retrieval strategy:
-#### 1. Query Processing
-```python
-def process_query(query: str, company: str = None, year: int = None):
-    """
-    Convert user query to searchable vector.
-    
-    Args:
-        query: Natural language question
-        company: Optional company filter
-        year: Optional year filter
-    
-    Returns:
-        384-dimensional query vector
-    """
-    model = SentenceTransformer('all-MiniLM-L6-v2')
-    query_embedding = model.encode(query, convert_to_numpy=True)
-    
-    return query_embedding.tolist()
-```
-
-#### 2. Vector Search
+**Storage schema:**
 ```sql
--- Supabase RPC function for similarity search
-CREATE OR REPLACE FUNCTION search_documents(
-    query_embedding vector(384),
-    match_threshold float DEFAULT 0.3,
-    match_count int DEFAULT 5,
-    filter_company text DEFAULT NULL,
-    filter_year int DEFAULT NULL
-)
-RETURNS TABLE (
-    id uuid,
-    content text,
-    company text,
-    year int,
-    page int,
-    similarity float
-)
-LANGUAGE plpgsql
-AS $$
-BEGIN
-    RETURN QUERY
-    SELECT
-        document_chunks.id,
-        document_chunks.content,
-        document_chunks.company,
-        document_chunks.year,
-        document_chunks.page,
-        1 - (document_chunks.embedding <=> query_embedding) as similarity
-    FROM document_chunks
-    WHERE 
-        (filter_company IS NULL OR company ILIKE '%' || filter_company || '%')
-        AND (filter_year IS NULL OR year = filter_year)
-        AND 1 - (embedding <=> query_embedding) >= match_threshold
-    ORDER BY embedding <=> query_embedding
-    LIMIT match_count;
-END;
-$$;
+CREATE TABLE document_chunks (
+  id UUID PRIMARY KEY,
+  document_id UUID,
+  company TEXT,
+  year INTEGER,
+  page INTEGER,
+  content TEXT,
+  embedding vector(384),  -- pgvector type
+  created_at TIMESTAMP
+);
+
+CREATE INDEX ON document_chunks 
+USING ivfflat (embedding vector_cosine_ops)
+WITH (lists = 100);
 ```
-
-**Key Features:**
-- Cosine similarity via pgvector operator `<=>`
-- Configurable threshold (default: 0.3 for high recall)
-- Optional company and year filtering
-- Returns top 5 most relevant chunks (configurable)
-- Similarity scores normalized to 0-1 range
-
-#### 3. Context Assembly
-```python
-def assemble_context(chunks: List[dict]) -> str:
-    """
-    Format retrieved chunks into LLM context.
-    
-    Each chunk includes:
-    - Source citation (company, year, page)
-    - Content text
-    - Similarity score
-    """
-    context_parts = []
-    
-    for chunk in chunks:
-        context_parts.append(
-            f"[Source: {chunk['company']} {chunk['year']} Report, "
-            f"Page {chunk['page']}, Relevance: {chunk['similarity']:.2f}]\n"
-            f"{chunk['content']}"
-        )
-    
-    return "\n\n".join(context_parts)
-```
-
-#### 4. Generation
-```python
-def generate_rag_response(query: str, context: str) -> dict:
-    """
-    Generate answer using Gemini 2.0 Flash with retrieved context.
-    
-    Returns JSON with:
-    - answer: Factual response based on context
-    - citations: Source references with page numbers
-    - confidence: high/medium/low based on context relevance
-    """
-    prompt = f"""You are an ESG sustainability expert analyzing corporate sustainability reports.
-
-USER QUESTION:
-{query}
-
-RELEVANT CONTEXT FROM REPORTS:
-{context}
-
-INSTRUCTIONS:
-1. Answer the question based ONLY on the provided context
-2. Include specific citations with company name, year, and page number
-3. If the context doesn't fully answer the question, say so
-4. Be precise and factual
-5. Return your response in JSON format
-
-Response format:
-{{
-  "answer": "Your detailed answer here",
-  "citations": [
-    {{"company": "...", "year": 2024, "page": 5, "quote": "relevant quote"}}
-  ],
-  "confidence": "high|medium|low"
-}}"""
-
-    response = gemini.generate_content(
-        prompt,
-        generation_config={
-            "temperature": 0.2,  # Deterministic, factual
-            "max_output_tokens": 2000
-        }
-    )
-    
-    return parse_json_response(response.text)
-```
-
-**Generation Parameters:**
-- **Temperature:** 0.2 (deterministic, factual responses)
-- **Max tokens:** 2000
-- **Model:** Gemini 2.0 Flash
-- **Output format:** Structured JSON with citations
 
 ---
 
-## Kubernetes Deployment
-### Container Orchestration
-The platform is deployed on Kubernetes with cloud-native best practices:
-#### Deployment Configuration
+## RAG Architecture
 
+### Semantic Search Pipeline
+
+**1. Query Processing**
+```python
+# Convert natural language to 384-dim vector
+model = SentenceTransformer('all-MiniLM-L6-v2')
+query_embedding = model.encode(query, convert_to_numpy=True)
+```
+
+**2. Vector Similarity Search**
+```sql
+-- Cosine similarity via pgvector
+SELECT *, 1 - (embedding <=> query_embedding) AS similarity
+FROM document_chunks
+WHERE similarity > 0.4  -- Threshold τ
+ORDER BY similarity DESC
+LIMIT 5;
+```
+
+**3. Context Assembly**
+```python
+# Format retrieved chunks with citations
+context = [
+  f"[Source: {company} {year} Report, Page {page}]\n{content}"
+  for chunk in top_5_chunks
+]
+```
+
+**4. LLM Generation**
+```python
+# Gemini 2.0 Flash generates grounded response
+prompt = f"""
+USER QUESTION: {query}
+
+RELEVANT CONTEXT: {assembled_context}
+
+Return JSON:
+{{
+  "answer": "factual response",
+  "citations": [{{"company": "...", "year": 2024, "page": 5}}],
+  "confidence": "high|medium|low"
+}}
+"""
+
+response = gemini.generate(prompt, temperature=0.2)
+```
+
+---
+
+##  Deployment
+
+### Kubernetes (Production)
+```bash
+# Deploy with image rebuild (30 minutes first time)
+./deployment.sh start k8s
+
+# Deploy without rebuild (2 minutes)
+./deployment.sh start k8s --skip-build
+
+# Check status
+./deployment.sh status k8s
+
+# View logs
+./deployment.sh logs k8s
+
+# Stop (keeps namespace & secrets)
+./deployment.sh stop k8s
+
+# Complete cleanup
+./deployment.sh stop k8s --cleanup
+```
+
+**Kubernetes Configuration:**
 ```yaml
 # Namespace isolation
 namespace: ecoeye
 
-# Image pull policy
-imagePullPolicy: Never  # Local development
-# imagePullPolicy: IfNotPresent  # Production
-
-# Resource limits
+# Resource limits per pod
 resources:
   requests:
     cpu: 250m
@@ -426,258 +258,113 @@ resources:
     cpu: 500m
     memory: 512Mi
 
-# Replica configuration
+# High availability
 replicas:
-  api: 2        # Load balanced
-  frontend: 1   # Single instance
+  api: 2        # Load balanced with NodePort
+  frontend: 1
   workers: 1    # Each worker type
-```
 
-#### Service Types & Networking
-**External Access (NodePort):**
-```yaml
-# API Service
-apiVersion: v1
-kind: Service
-metadata:
-  name: api
-  namespace: ecoeye
-spec:
-  type: NodePort
-  ports:
-  - port: 8000
-    targetPort: 8000
-    nodePort: 30800
-  selector:
-    app: api
-```
-
-```yaml
-# Frontend Service
-apiVersion: v1
-kind: Service
-metadata:
-  name: frontend
-  namespace: ecoeye
-spec:
-  type: NodePort
-  ports:
-  - port: 3000
-    targetPort: 3000
-    nodePort: 30300
-  selector:
-    app: frontend
-```
-
-**Internal Access (ClusterIP):**
-```yaml
-# Redis Service
-apiVersion: v1
-kind: Service
-metadata:
-  name: redis
-  namespace: ecoeye
-spec:
-  type: ClusterIP
-  ports:
-  - port: 6379
-    targetPort: 6379
-  selector:
-    app: redis
-```
-
-**CORS Configuration:**
-```python
-# API CORS setup
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",      # Docker Compose
-        "http://localhost:30300",     # Kubernetes
-        "http://frontend:3000",       # Internal
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-```
-
-#### Self-Healing & Health Checks
-**Liveness Probes:**
-```yaml
+# Health checks
 livenessProbe:
   httpGet:
     path: /health
     port: 8000
   initialDelaySeconds: 30
   periodSeconds: 10
-  timeoutSeconds: 5
-  failureThreshold: 3
-```
 
-**Readiness Probes:**
-```yaml
 readinessProbe:
   httpGet:
     path: /health
     port: 8000
   initialDelaySeconds: 10
   periodSeconds: 5
-  timeoutSeconds: 3
-  failureThreshold: 3
 ```
 
-**Self-Healing Behavior:**
-- Pod crashes → Automatic restart
-- Liveness check fails → Pod killed and recreated
-- Readiness check fails → Pod removed from service load balancer
-- Automatic recovery when healthy
+**Access URLs:**
+- Frontend: http://localhost:30300
+- API: http://localhost:30800
+- API Docs: http://localhost:30800/docs
 
-#### Secrets Management
-
+### Docker Compose (Development)
 ```bash
-# Create secrets from .env file
-kubectl create secret generic ecoeye-secrets \
-  --from-env-file=.env \
-  --namespace=ecoeye
+# Start all services
+./deployment.sh start compose
 
-# Secrets contain:
-# - SUPABASE_URL
-# - SUPABASE_ANON_KEY
-# - GEMINI_API_KEY
+# Stop (keeps volumes)
+./deployment.sh stop compose
+
+# Complete cleanup
+./deployment.sh stop compose --cleanup
 ```
 
-**Using secrets in deployments:**
-```yaml
-env:
-- name: SUPABASE_URL
-  valueFrom:
-    secretKeyRef:
-      name: ecoeye-secrets
-      key: SUPABASE_URL
-- name: GEMINI_API_KEY
-  valueFrom:
-    secretKeyRef:
-      name: ecoeye-secrets
-      key: GEMINI_API_KEY
-```
+**Access URLs:**
+- Frontend: http://localhost:3000
+- API: http://localhost:8000
+- API Docs: http://localhost:8000/docs
 
-## 🔄 Data Flow
-Complete journey from PDF upload to searchable insights:
-### Upload to Insight Flow
-┌─────────────────────────────────────────────────────────────────┐
-│ 1. UPLOAD STAGE                                                 │
-├─────────────────────────────────────────────────────────────────┤
-│ User uploads PDF → API assigns UUID → Store in /data/raw_pdfs   │
-│ → Enqueue to 'pdf_processing' queue                             │
-└─────────────────────────────────────────────────────────────────┘
-                            ▼
-┌─────────────────────────────────────────────────────────────────┐
-│ 2. EXTRACTION STAGE                                             │
-├─────────────────────────────────────────────────────────────────┤
-│ PDF Worker pulls task → Extract text page-by-page               │
-│ → Create 500-char chunks (sentence boundaries)                  │
-│ → Enqueue to 'ai_audit' queue                                   │
-└─────────────────────────────────────────────────────────────────┘
-                            ▼
-┌─────────────────────────────────────────────────────────────────┐
-│ 3. AI ANALYSIS STAGE                                            │
-├─────────────────────────────────────────────────────────────────┤
-│ AI Worker processes with Gemini 2.0                             │
-│ → Extract leaf rating, emissions, claims                        │
-│ → Store in Supabase 'company_reports'                           │
-│ → Enqueue chunks to 'embeddings' queue                          │
-└─────────────────────────────────────────────────────────────────┘
-                            ▼
-┌─────────────────────────────────────────────────────────────────┐
-│ 4. EMBEDDING STAGE                                              │
-├─────────────────────────────────────────────────────────────────┤
-│ Embeddings Worker generates 384-dim vectors                     │
-│ → Store in Supabase 'document_chunks' with pgvector             │
-│ → Create cosine similarity index                                │
-└─────────────────────────────────────────────────────────────────┘
-                            ▼
-┌─────────────────────────────────────────────────────────────────┐
-│ 5. QUERY STAGE                                                  │
-├─────────────────────────────────────────────────────────────────┤
-│ User submits query → API converts to vector                     │
-│ → Supabase RPC similarity search → Gemini generates answer      │
-│ → Response with citations returned                              │
-└─────────────────────────────────────────────────────────────────┘
+### Rebuild Commands
+```bash
+# Rebuild all images
+./deployment.sh rebuild all
+
+# Rebuild frontend only (updates API URL for deployment mode)
+./deployment.sh rebuild frontend
+```
 
 ##  Technical Stack
+
 ### Backend
 - **Python 3.11** - Primary language
-- **FastAPI** - API framework
-- **Uvicorn** - ASGI server
-- **Redis 7 Alpine** - Task queue
-- **Supabase PostgreSQL** - Database with pgvector
-- **PyPDF2, pdfplumber** - PDF processing
-- **Poppler** - PDF utilities
+- **FastAPI 0.115.5** - High-performance API framework
+- **Uvicorn 0.32.1** - ASGI server
+- **Redis 7.2** - Task queue and caching
+- **Supabase** - PostgreSQL 15 + pgvector 0.5.1
+- **pdfplumber 0.11.4** - PDF text extraction
+- **PyPDF2** - PDF utilities
 
 ### AI/ML
-- **Google Gemini 2.0 Flash** - LLM for analysis and generation
-- **Sentence Transformers** - Embedding model
-- **all-MiniLM-L6-v2** - 384-dim vectors (22.7M params)
-- **pgvector** - Vector similarity search
+- **Google Gemini 2.0 Flash** - LLM for auditing and RAG generation
+- **Sentence Transformers 3.3.1** - Embedding framework
+- **all-MiniLM-L6-v2** - 384-dim semantic vectors (22.7M params)
+- **pgvector 0.5.1** - Vector similarity extension for PostgreSQL
 
 ### Frontend
-- **Next.js 13+** - React framework (App Router)
+- **Next.js 14** - React framework (App Router)
 - **React 18** - UI library
-- **TypeScript** - Type safety
-- **Tailwind CSS** - Styling
+- **TypeScript 5.0** - Type safety
+- **Tailwind CSS 3.4** - Utility-first styling
 - **Axios** - HTTP client
-- **Lucide Icons** - Icon library
+- **Recharts** - Data visualization
 
 ### Infrastructure
-- **Docker** - Containerization
-- **Docker Compose** - Development orchestration
-- **Kubernetes** - Production orchestration
+- **Docker 24.0** - Containerization
+- **Kubernetes 1.28** - Container orchestration
+- **kubectl 1.28** - Cluster management
 - **Bash** - Deployment automation
 
+##  Development
 
-##  Technical Achievements
-### Performance Optimizations
-- ✅ **Sentence-boundary chunking:** Improved context coherence by 40%
-- ✅ **Similarity threshold tuning:** Reduced from 0.7 to 0.3 for 3x better recall
-- ✅ **Vector indexing:** Sub-100ms query response time
-- ✅ **Redis queue optimization:** Concurrent processing across workers
+### Environment Variables
+```env
+# API Keys
+GEMINI_API_KEY=your_gemini_api_key_here
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your_supabase_anon_key
 
-### Deployment Automation
-- ✅ Unified deployment script supporting both Docker Compose and Kubernetes
-- ✅ Environment-specific frontend builds (build args for NodePort URLs)
-- ✅ Automated secrets management from .env to Kubernetes Secrets
-- ✅ Health check integration with 3-minute pod readiness timeout
+# Internal (auto-configured)
+REDIS_URL=redis://redis:6379
+NEXT_PUBLIC_API_URL=http://localhost:30800  # K8s
+# NEXT_PUBLIC_API_URL=http://localhost:8000  # Compose
+```
 
-### Cloud-Native Features
-- ✅ **Declarative infrastructure:** YAML-based configuration
-- ✅ **Immutable deployments:** Rolling updates with zero downtime
-- ✅ **Service discovery:** Kubernetes DNS-based resolution
-- ✅ **Horizontal scaling:** Manual (kubectl scale) and HPA-ready
-- ✅ **Self-healing:** Automatic pod restart on failure
+## 👥 Authors
 
+**Group W Team 2**  
+Singapore Institute of Technology / University of Glasgow
 
-##  Future Enhancements
+- Neo Sun Wei - 2400979@sit.singaporetech.edu.sg
+- Jabier Ho Wei Le - 2402063@sit.singaporetech.edu.sg
+- Haley Tan Hui Xin - 2402023@sit.singaporetech.edu.sg
+- Gerald Tan Hau Qing - 2403349@sit.singaporetech.edu.sg
 
-### Production Readiness
-- [ ] **Horizontal Pod Autoscaler (HPA)** for automatic scaling based on CPU/memory
-- [ ] **Multi-zone deployment** for high availability
-- [ ] **Ingress controller** replacing NodePort (standard ports 80/443)
-- [ ] **TLS/SSL certificates** for secure communication
-
-### AI & Search Enhancements
-- [ ] **Hybrid search:** Combining vector similarity with keyword matching (BM25)
-- [ ] **Re-ranking:** Cross-encoder models for improved relevance
-- [ ] **Multi-modal RAG:** Image and table extraction from PDFs
-- [ ] **Fine-tuned embeddings:** Domain-specific sustainability corpus
-- [ ] **Comparative analysis:** Multi-company sustainability benchmarking
-- [ ] **Time-series analysis:** Year-over-year trend detection
-
-### Feature Additions
-- [ ] **Report comparison** tool
-- [ ] **Export functionality** (CSV, JSON, PDF reports)
-- [ ] **Historical trending** dashboards
-
-##  Authors
-- **Group W Team 2** 
-Built for Dell Cloud Native Award Competition 
+Built for Dell Cloud Native Award Competition 2026
