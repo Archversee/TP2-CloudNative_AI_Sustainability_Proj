@@ -55,6 +55,8 @@ chmod +x deployment.sh
 
 ##  System Architecture
 
+EcoEye implements a distributed microservices architecture with six independently scalable services:
+
 ### Architecture Diagram
 ```
 ┌─────────────┐
